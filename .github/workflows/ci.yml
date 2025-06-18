@@ -16,10 +16,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4             # pull the code
-    - uses: actions/setup-go@v5             # install Go
+    - uses: actions/checkout@v4             
+    - uses: actions/setup-go@v5             
       with:
         go-version: ${{ matrix.go }}
-    - run: go vet ./...                     # static checks :contentReference[oaicite:1]{index=1}
-    - run: go test -v ./...                 # run smoke test
+    - run: go vet ./...                     
+    - run: go test -v ./...                 # run tests for every package
     - run: go build ./...                   # build every package

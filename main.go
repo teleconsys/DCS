@@ -1,5 +1,7 @@
 package main
 
+import "github.com/teleconsys/DCS/cmd"
+
 func main() {
-	// TODO
+	cmd.Execute()
 }

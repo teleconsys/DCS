@@ -8,7 +8,6 @@ func newLoadFileCmd() *cobra.Command {
 		Short: "Add a local file to IPFS and pin it",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			// Printf now has the matching %s argument, so `go vet` is happy.
 			cmd.Printf("Loading %s into IPFS …\n", args[0])
 			// TODO: real implementation
 		},

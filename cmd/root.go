@@ -14,7 +14,6 @@ import (
 
 var cfgFile string
 
-// rootCmd is the CLI entry-point.
 var rootCmd = &cobra.Command{
 	Use:   "DCS",
 	Short: "Decentralised Content Security CLI",
@@ -23,7 +22,6 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-// Execute is called by main().
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -36,7 +34,6 @@ func init() {
 	rootCmd.PersistentFlags().
 		StringVar(&cfgFile, "config", "", "config file (default $HOME/.DCS.yaml)")
 
-	// register sub-command trees
 	rootCmd.AddCommand(
 		app.NewCmd(),
 		ipfs.NewCmd(),

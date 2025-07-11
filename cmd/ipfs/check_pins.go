@@ -16,24 +16,24 @@ func newCheckPinsCmd() *cobra.Command {
 		Short: "Verify that pins are still intact on the cluster",
 		Run: func(cmd *cobra.Command, _ []string) {
 			cmd.Println("Checking IPFS pins …")
-			
+
 			// Connect to local IPFS node
 			api, err := rpc.NewLocalApi()
 			if err != nil {
 				cmd.PrintErrf("Failed to connect to IPFS node: %v\n", err)
 				os.Exit(1)
 			}
-			
+
 			ctx := context.Background()
 			cmd.Println("After context")
-			
+
 			// Get list of pinned items and store it in a channel
 			pinsChan := make(chan iface.Pin)
 			errChan := make(chan error, 1)
 
 			go func() {
 				errChan <- api.Pin().Ls(ctx, pinsChan)
-				close(pinsChan)
+				// Remove the explicit close - the channel will be closed by the Ls method
 			}()
 
 			cmd.Println("After list pins")
@@ -76,13 +76,13 @@ func newCheckPinsCmd() *cobra.Command {
 				cmd.PrintErrf("Failed to list pins: %v\n", err)
 				os.Exit(1)
 			}
-			
+
 			// Print summary
 			cmd.Println("\n--- Pin Check Summary ---")
 			cmd.Printf("Total pins: %d\n", totalPins)
 			cmd.Printf("Intact pins: %d\n", intactPins)
 			cmd.Printf("Broken pins: %d\n", brokenPins)
-			
+
 			if brokenPins > 0 {
 				cmd.PrintErrf("\n⚠️  Found %d broken pins!\n", brokenPins)
 				os.Exit(1)

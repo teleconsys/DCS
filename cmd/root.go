@@ -9,6 +9,7 @@ import (
 
 	// sub-trees
 	"github.com/teleconsys/DCS/cmd/app"
+	"github.com/teleconsys/DCS/cmd/iota_sc"
 	"github.com/teleconsys/DCS/cmd/ipfs"
 )
 
@@ -37,6 +38,7 @@ func init() {
 	rootCmd.AddCommand(
 		app.NewCmd(),
 		ipfs.NewCmd(),
+		iota_sc.NewCmd(),
 	)
 }
 

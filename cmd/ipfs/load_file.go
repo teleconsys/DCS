@@ -20,7 +20,7 @@ func newLoadFileCmd() *cobra.Command {
 		Use:   "load-file <path>",
 		Short: "Add a local file to IPFS and pin it",
 		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
 			cmd.Printf("Loading %s into IPFS …\n", filePath)
 			
@@ -28,7 +28,7 @@ func newLoadFileCmd() *cobra.Command {
 			fileContent, err := os.ReadFile(filePath)
 			if err != nil {
 				cmd.PrintErrf("Failed to read file %s: %v\n", filePath, err)
-				os.Exit(1)
+				return err
 			}
 			
 			cmd.Printf("File size: %d bytes\n", len(fileContent))
@@ -38,14 +38,14 @@ func newLoadFileCmd() *cobra.Command {
 			// key := make([]byte, 32) // AES256 requires 32 bytes
 			// if _, err := rand.Read(key); err != nil {
 			// 	cmd.PrintErrf("Failed to generate encryption key: %v\n", err)
-			// 	os.Exit(1)
+			// 	return err
 			// }
 			
 			// // Encrypt the file content
 			// encryptedContent, err := encryptAES256(fileContent, key)
 			// if err != nil {
 			// 	cmd.PrintErrf("Failed to encrypt file: %v\n", err)
-			// 	os.Exit(1)
+			// 	return err
 			// }
 			
 			// cmd.Printf("Encrypted content size: %d bytes\n", len(encryptedContent))
@@ -54,7 +54,7 @@ func newLoadFileCmd() *cobra.Command {
 			api, err := rpc.NewLocalApi()
 			if err != nil {
 				cmd.PrintErrf("Failed to connect to IPFS node: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			
 			ctx := context.Background()
@@ -64,20 +64,22 @@ func newLoadFileCmd() *cobra.Command {
 			ipfsPath, err := api.Unixfs().Add(ctx, node)
 			if err != nil {
 				cmd.PrintErrf("Failed to add file to IPFS: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			
 			// Pin the content
 			err = api.Pin().Add(ctx, ipfsPath)
 			if err != nil {
 				cmd.PrintErrf("Failed to pin file: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 			
 			cmd.Printf("✅ File successfully encrypted and uploaded to IPFS\n")
 			cmd.Printf("📁 IPFS Path: %s\n", ipfsPath.String())
 			// cmd.Printf("🔑 Encryption Key (hex): %x\n", key)
 			// cmd.Printf("⚠️  Store this key securely to decrypt the file later!\n")
+			
+			return nil
 		},
 	}
 }

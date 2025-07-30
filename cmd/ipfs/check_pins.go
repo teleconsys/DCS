@@ -2,7 +2,8 @@ package ipfs
 
 import (
 	"context"
-	"os"
+	"fmt"
+	"strings"
 
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/client/rpc"
@@ -14,18 +15,17 @@ func newCheckPinsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check-pins",
 		Short: "Verify that pins are still intact on the cluster",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.Println("Checking IPFS pins …")
 
 			// Connect to local IPFS node
 			api, err := rpc.NewLocalApi()
 			if err != nil {
 				cmd.PrintErrf("Failed to connect to IPFS node: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 
 			ctx := context.Background()
-			cmd.Println("After context")
 
 			// Get list of pinned items and store it in a channel
 			pinsChan := make(chan iface.Pin)
@@ -36,20 +36,18 @@ func newCheckPinsCmd() *cobra.Command {
 				// Remove the explicit close - the channel will be closed by the Ls method
 			}()
 
-			cmd.Println("After list pins")
-
 			var totalPins int
 			var intactPins int
 			var brokenPins int
 
 			// Check each pin
 			for pin := range pinsChan {
-				cmd.Println("Inside for loop")
 				totalPins++
 				// Extract pin information
 				cidStr := pin.Path().String()
 				// Create path from CID
 				cid, err := path.NewPath(cidStr)
+				cidStr = strings.TrimPrefix(cidStr, "/ipfs/")
 				if err != nil {
 					cmd.PrintErrf("Invalid CID: %s - %v\n", cidStr, err)
 					brokenPins++
@@ -74,21 +72,25 @@ func newCheckPinsCmd() *cobra.Command {
 			// Check for errors after processing pins
 			if err := <-errChan; err != nil {
 				cmd.PrintErrf("Failed to list pins: %v\n", err)
-				os.Exit(1)
+				return err
 			}
 
 			// Print summary
 			cmd.Println("\n--- Pin Check Summary ---")
 			cmd.Printf("Total pins: %d\n", totalPins)
-			cmd.Printf("Intact pins: %d\n", intactPins)
-			cmd.Printf("Broken pins: %d\n", brokenPins)
+			if totalPins > 0 {
+				cmd.Printf("Intact pins: %d\n", intactPins)
+				cmd.Printf("Broken pins: %d\n", brokenPins)
 
-			if brokenPins > 0 {
-				cmd.PrintErrf("\n⚠️  Found %d broken pins!\n", brokenPins)
-				os.Exit(1)
-			} else {
-				cmd.Printf("\n✅ All %d pins are intact!\n", totalPins)
+				if brokenPins > 0 {
+					cmd.PrintErrf("\n⚠️  Found %d broken pins!\n", brokenPins)
+					return fmt.Errorf("found %d broken pins", brokenPins)
+				} else {
+					cmd.Printf("\n✅ All %d pins are intact!\n", totalPins)
+				}
 			}
+			
+			return nil
 		},
 	}
 }

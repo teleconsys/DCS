@@ -10,29 +10,12 @@ import (
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
-// NewCmd wires the whole `iota-sc` subtree.
-func NewCmd() *cobra.Command {
-	root := &cobra.Command{
-		Use:   "iota-sc",
-		Short: "Interact with IOTA Rebased smart contracts",
-	}
-	root.PersistentFlags().
-		String("rpc", "https://api.testnet.iota.cafe", "JSON-RPC endpoint")
-	_ = viper.BindPFlag("rebase.rpc", root.PersistentFlags().Lookup("rpc"))
-
-	root.AddCommand(newPingCmd())
-	// root.AddCommand(newCallCmd())   ← add more as you grow
-	return root
-}
-
-// ---------------------------------------------------------------------
-
 func newPingCmd() *cobra.Command {
 	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "ping",
-		Short: "Quick connectivity check against the IOTA node",
+		Short: "Quick connectivity check against the IOTA network",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			cli, err := rebased.Dial(viper.GetString("rebase.rpc"))
 			if err != nil {

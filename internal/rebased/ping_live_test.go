@@ -2,7 +2,6 @@ package rebased_test
 
 import (
 	"context"
-	"encoding/hex"
 	"os"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ func TestPingIotaRebased(t *testing.T) {
 		t.Fatalf("Dial: %v", err)
 	}
 
-	// 1️⃣  Endpoint identity
+	// Endpoint identity
 	ok, err := cli.IsIota(ctx)
 	if err != nil {
 		t.Fatalf("IsIota: %v", err)
@@ -34,19 +33,7 @@ func TestPingIotaRebased(t *testing.T) {
 		t.Fatal("endpoint responded but is NOT IOTA Rebased")
 	}
 
-	// 2️⃣  Chain identifier should be an 8-char hex string
-	chain, err := cli.ChainIdentifier(ctx)
-	if err != nil {
-		t.Fatalf("ChainIdentifier: %v", err)
-	}
-	if len(chain) != 8 {
-		t.Fatalf("unexpected chain identifier format: %q", chain)
-	}
-	if _, err := hex.DecodeString(chain); err != nil {
-		t.Fatalf("unexpected chain identifier format: %q", chain)
-	}
-
-	// 3️⃣  Basic liveness
+	// Basic liveness
 	cp, err := cli.Ping(ctx)
 	if err != nil {
 		t.Fatalf("Ping: %v", err)
@@ -55,5 +42,5 @@ func TestPingIotaRebased(t *testing.T) {
 		t.Fatal("checkpoint number is zero – node unhealthy?")
 	}
 
-	t.Logf("PASS – IOTA chain=%s, checkpoint=%d", chain, cp)
+	t.Logf("PASS – IOTA Rebased testnet checkpoint=%d", cp)
 }

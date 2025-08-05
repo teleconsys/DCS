@@ -8,9 +8,7 @@ import (
 	suiclient "github.com/coming-chat/go-sui/v2/client"
 )
 
-// --------------------------------------------------------------------
-// 1.  RPC method prefix helpers
-// --------------------------------------------------------------------
+// RPC method prefix helpers
 
 type IotaMethod string
 
@@ -22,14 +20,12 @@ var _ suiclient.Method = IotaMethod("")
 func iotaMethod(name string) suiclient.Method { return IotaMethod("iota_" + name) }
 
 // iotaxMethod builds "iotax_<name>" (indexer RPC).
-func iotaxMethod(name string) suiclient.Method { return IotaMethod("iotax_" + name) }
+//func iotaxMethod(name string) suiclient.Method { return IotaMethod("iotax_" + name) }
 
 // suiMethod builds "sui_<name>" (Sui negative check).
 func suiMethod(name string) suiclient.Method { return IotaMethod("sui_" + name) }
 
-// --------------------------------------------------------------------
-// 2.  Client
-// --------------------------------------------------------------------
+// Client
 
 type Client struct{ rpc *suiclient.Client }
 
@@ -43,11 +39,9 @@ func Dial(rpcURL string) (*Client, error) {
 	return &Client{rpc: cli}, nil
 }
 
-// --------------------------------------------------------------------
-// 3. Convenience methods
-// --------------------------------------------------------------------
+// Convenience methods
 
-// Call is a generic passthrough for RPC calls.
+// Generic passthrough for RPC calls.
 func (c *Client) Call(
 	ctx context.Context,
 	out interface{},

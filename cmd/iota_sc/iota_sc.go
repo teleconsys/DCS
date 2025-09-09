@@ -20,6 +20,7 @@ func NewCmd() *cobra.Command {
 	iota_scCmd.AddCommand(
 		newPingCmd(),
 		newAccountCmd(),
+		newWhitelistCmd(),
 	)
 	return iota_scCmd
 }

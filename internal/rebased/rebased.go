@@ -16,17 +16,13 @@ func (m IotaMethod) String() string { return string(m) }
 
 var _ suiclient.Method = IotaMethod("")
 
-// iotaMethod builds "iota_<name>" (full-node RPC).
+// Builds "iota_<name>" (full-node RPC).
 func iotaMethod(name string) suiclient.Method { return IotaMethod("iota_" + name) }
 
-// iotaxMethod builds "iotax_<name>" (indexer RPC).
-//func iotaxMethod(name string) suiclient.Method { return IotaMethod("iotax_" + name) }
-
-// suiMethod builds "sui_<name>" (Sui negative check).
+// Builds "sui_<name>" (Sui negative check).
 func suiMethod(name string) suiclient.Method { return IotaMethod("sui_" + name) }
 
 // Client
-
 type Client struct{ rpc *suiclient.Client }
 
 // Dial opens an HTTPS JSON-RPC connection to an IOTA Rebased node.
@@ -38,8 +34,6 @@ func Dial(rpcURL string) (*Client, error) {
 	}
 	return &Client{rpc: cli}, nil
 }
-
-// Convenience methods
 
 // Generic passthrough for RPC calls.
 func (c *Client) Call(
@@ -61,7 +55,7 @@ func (c *Client) Ping(ctx context.Context) (uint64, error) {
 	return strconv.ParseUint(raw, 10, 64)
 }
 
-// ChainIdentifier returns the chain ID string, e.g. "iota:rebase-testnet".
+// Returns the chain ID string, e.g. "iota:rebase-testnet".
 func (c *Client) ChainIdentifier(ctx context.Context) (string, error) {
 	var id string
 	if err := c.Call(ctx, &id, iotaMethod("getChainIdentifier")); err != nil {
@@ -70,7 +64,7 @@ func (c *Client) ChainIdentifier(ctx context.Context) (string, error) {
 	return id, nil
 }
 
-// IsIota returns true if the endpoint is an IOTA-Rebased node
+// Returns true if the endpoint is an IOTA-Rebased node
 func (c *Client) IsIota(ctx context.Context) (bool, error) {
 	// Positive check
 	id, err := c.ChainIdentifier(ctx)
@@ -86,34 +80,3 @@ func (c *Client) IsIota(ctx context.Context) (bool, error) {
 	}
 	return true, nil
 }
-
-// // GetObject fetches any on-chain object by ID (string form).
-// func (c *Client) GetObject(ctx context.Context, id string) (*suiclient.ObjectResponse, error) {
-// 	var rsp suiclient.ObjectResponse
-// 	if err := c.Call(ctx, &rsp,
-// 		iotaMethod("getObject"),             // RPC method
-// 		id,                                  // param[0]
-// 		map[string]any{"showContent": true}, // param[1] – same shape as Sui
-// 	); err != nil {
-// 		return nil, err
-// 	}
-// 	return &rsp, nil
-// }
-
-// // ExecuteTransactionBlock submits a signed BCS tx to the network.
-// // You build & sign `bcsTx` with the regular Sui TxBuilder API.
-// func (c *Client) ExecuteTransactionBlock(
-// 	ctx context.Context,
-// 	bcsTx []byte,
-// 	opts suiclient.ExecuteTransactionBlockOptions,
-// ) (*suiclient.ExecuteTransactionBlockResponse, error) {
-// 	var rsp suiclient.ExecuteTransactionBlockResponse
-// 	if err := c.Call(ctx, &rsp,
-// 		iotaMethod("executeTransactionBlock"),
-// 		bcsTx,
-// 		opts,
-// 	); err != nil {
-// 		return nil, err
-// 	}
-// 	return &rsp, nil
-// }

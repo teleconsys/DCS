@@ -12,6 +12,7 @@ func NewCmd() *cobra.Command {
 	ipfsCmd.AddCommand(
 		newCheckPinsCmd(),
 		newLoadFileCmd(),
+		newCheckCidCmd(),
 	)
 	return ipfsCmd
 }

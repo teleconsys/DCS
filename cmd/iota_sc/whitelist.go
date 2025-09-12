@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,11 +19,15 @@ func newWhitelistCmd() *cobra.Command {
 		Short:        "Whitelist utilities",
 		SilenceUsage: true,
 	}
-	// Flag persistente: --id (puoi anche usare l'env DCS_WHITELIST_ID)
+	// Allow passing the whitelist object id via flag or env (DCS_WHITELIST_ID)
 	cmd.PersistentFlags().String("id", "", "Whitelist object ID (0x...)")
 	_ = viper.BindPFlag("dcs.whitelist_id", cmd.PersistentFlags().Lookup("id"))
 
-	cmd.AddCommand(newWhitelistHasCmd())
+	cmd.AddCommand(
+		newWhitelistHasCmd(),
+		newWhitelistAddCmd(),
+		//TODO: newWhitelistRemoveCmd(),
+	)
 	return cmd
 }
 
@@ -33,48 +38,46 @@ func newWhitelistHasCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "has [ADDRESS]",
 		Short: "Return true if ADDRESS/ID is in the whitelist",
-		Args:  cobra.ArbitraryArgs, // gestiamo noi l'arg posizionale
+		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 1) Risolvi l'ID whitelist: flag -> viper -> env
+			// 1) Resolve whitelist ID: flag -> viper -> env
 			id := viper.GetString("dcs.whitelist_id")
 			if id == "" {
 				id = os.Getenv("DCS_WHITELIST_ID")
 			}
 			if id == "" {
-				return fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id 0x...")
+				return fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
 			}
 
-			// 2) Risolvi l'indirizzo: flag --member prioritario, altrimenti argomento
+			// 2) Resolve member: flag (priority) -> positional arg
 			if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
 				member = mFlag
 			} else if len(args) > 0 {
 				member = args[0]
 			}
 			if member == "" {
-				return fmt.Errorf("provide address as positional arg or --member 0x")
+				return fmt.Errorf("provide address as positional arg or --member (0x...)")
 			}
 			member = strings.ToLower(member)
 
-			// 3) Chiama l'IOTA CLI e prendi SOLO stdout in JSON
+			// 3) Call IOTA CLI and get stdout JSON
 			out, err := exec.Command("iota", "client", "object", id, "--json").Output()
-			// Se il comando fallisce ma ha comunque prodotto stdout, proviamo a parse-arlo.
 			if err != nil && len(out) == 0 {
 				return fmt.Errorf("iota client object failed: %w", err)
 			}
 
-			// 4) Se c'è qualsiasi prefisso non-JSON, tieni solo da '{'/'[' in poi
+			// 4) Keep only from the first '{'/'[' onward (tolerate banners on stdout)
 			if i := bytes.IndexAny(out, "{["); i >= 0 {
 				out = out[i:]
 			}
 
-			// 5) Estrai fields.whitelist dal JSON (forma corrente o legacy)
-			fields, err := extractFieldsMap(out)
+			// 5) Extract fields.whitelist
+			fields, err := extractObjectFields(out)
 			if err != nil {
 				return err
 			}
 			rawWL, ok := fields["whitelist"]
 			if !ok {
-				// Nessuna whitelist presente → false (o niente se --print-addr)
 				if printAddr {
 					return nil
 				}
@@ -82,8 +85,7 @@ func newWhitelistHasCmd() *cobra.Command {
 				return nil
 			}
 
-			// 6) Verifica presenza e stampa output minimale
-			found := containsWhitelist(rawWL, member)
+			found := whitelistContainsAddress(rawWL, member)
 			if printAddr {
 				if found {
 					fmt.Println(member)
@@ -98,16 +100,113 @@ func newWhitelistHasCmd() *cobra.Command {
 			return nil
 		},
 	}
-
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to check (0x...)")
 	c.Flags().BoolVar(&printAddr, "print-addr", false, "Print the address if present (instead of true/false)")
 	return c
 }
 
-// Estrae la mappa fields dalle due possibili forme del JSON della CLI
-// 1) root.content.fields (forma attuale)
-// 2) root.data.content.fields (forma legacy)
-func extractFieldsMap(jsonBytes []byte) (map[string]any, error) {
+// add <ADDRESS> to whitelist by calling the on-chain function (GC must be active signer).
+// TODO: check if already present and skip creation of transaction if so.
+func newWhitelistAddCmd() *cobra.Command {
+	var member string
+	var pkgID string
+	var gasID string
+	var gasBudget uint64
+	var iotaBin string
+
+	c := &cobra.Command{
+		Use:   "add [ADDRESS]",
+		Short: "Add ADDRESS/ID to the whitelist (requires GroundControl signer)",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Whitelist object id
+			whID := viper.GetString("dcs.whitelist_id")
+			if whID == "" {
+				whID = os.Getenv("DCS_WHITELIST_ID")
+			}
+			if whID == "" {
+				return fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
+			}
+
+			// Member: flag (priority) -> positional
+			if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
+				member = mFlag
+			} else if len(args) > 0 {
+				member = args[0]
+			}
+			if member == "" {
+				return fmt.Errorf("provide address as positional arg or --member (0x...)")
+			}
+			member = strings.ToLower(member)
+
+			// Package ID
+			if pkgID == "" {
+				pkgID = viper.GetString("dcs.package_id")
+			}
+			if pkgID == "" {
+				pkgID = os.Getenv("DCS_PACKAGE_ID")
+			}
+			if pkgID == "" {
+				return fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
+			}
+
+			// Gas coin + budget
+			if gasID == "" {
+				gasID = os.Getenv("WALLET_GAS_ID")
+			}
+			if gasID == "" {
+				return fmt.Errorf("set WALLET_GAS_ID env var or --gas (0x...)")
+			}
+			if gasBudget == 0 {
+				if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
+					if v, err := strconv.ParseUint(s, 10, 64); err == nil {
+						gasBudget = v
+					}
+				}
+				if gasBudget == 0 {
+					gasBudget = 10_000_000
+				}
+			}
+
+			if iotaBin == "" {
+				iotaBin = "iota"
+			}
+
+			// iota client call --package <pkg> --module dcs --function add_id_to_whitelist --args <member> <whitelist>
+			argsv := []string{
+				"client", "call",
+				"--package", pkgID,
+				"--module", "dcs",
+				"--function", "add_id_to_whitelist",
+				"--args", member, whID,
+				"--gas", gasID,
+				"--gas-budget", strconv.FormatUint(gasBudget, 10),
+			}
+			out, err := exec.Command(iotaBin, argsv...).CombinedOutput()
+
+			// Print raw result
+			//TODO: Clean output
+			os.Stdout.Write(out)
+			if err != nil {
+				return fmt.Errorf("iota client call failed: %w", err)
+			}
+			return nil
+		},
+	}
+
+	// Flags (all optional if env is set)
+	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
+	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
+	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
+	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (default: iota)")
+	return c
+}
+
+// Extract fields map from either shape:
+// 1) root.content.fields (current CLI)
+// 2) root.data.content.fields (legacy)
+func extractObjectFields(jsonBytes []byte) (map[string]any, error) {
 	var root map[string]any
 	if err := json.Unmarshal(jsonBytes, &root); err != nil {
 		return nil, fmt.Errorf("decode object json: %w", err)
@@ -127,8 +226,8 @@ func extractFieldsMap(jsonBytes []byte) (map[string]any, error) {
 	return nil, fmt.Errorf("fields not found in object JSON")
 }
 
-// Cerca needle dentro al vettore Move fields.whitelist (stringhe o mappe {"id":..., "bytes":...})
-func containsWhitelist(raw any, needle string) bool {
+// Check presence of needle in fields.whitelist (strings or maps {"id":..., "bytes":...})
+func whitelistContainsAddress(raw any, needle string) bool {
 	switch arr := raw.(type) {
 	case []any:
 		for _, item := range arr {

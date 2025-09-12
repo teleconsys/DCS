@@ -4,9 +4,11 @@ go 1.24.3
 
 require (
 	github.com/coming-chat/go-sui/v2 v2.0.1
+	github.com/ipfs/boxo v0.33.0
+	github.com/ipfs/kubo v0.36.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.39.0
 )
 
 require (
@@ -15,6 +17,7 @@ require (
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/btcsuite/btcutil v1.0.2 // indirect
 	github.com/caddyserver/certmagic v0.21.6 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -30,11 +33,10 @@ require (
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/facebookgo/atomicfile v0.0.0-20151019160806-2de1f203e7d5 // indirect
+	github.com/fardream/go-bcs v0.2.1 // indirect
 	github.com/filecoin-project/go-clock v0.1.0 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
-	github.com/btcsuite/btcutil v1.0.2 // indirect
-	github.com/fardream/go-bcs v0.2.1 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gammazero/deque v1.0.0 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
@@ -52,7 +54,6 @@ require (
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
-	github.com/ipfs/boxo v0.33.0 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
 	github.com/ipfs/go-block-format v0.2.2 // indirect
 	github.com/ipfs/go-cid v0.5.0 // indirect
@@ -63,11 +64,9 @@ require (
 	github.com/ipfs/go-ipld-cbor v0.2.0 // indirect
 	github.com/ipfs/go-ipld-format v0.6.2 // indirect
 	github.com/ipfs/go-ipld-legacy v0.2.2 // indirect
-	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.6.0 // indirect
 	github.com/ipfs/go-metrics-interface v0.3.0 // indirect
 	github.com/ipfs/go-unixfsnode v1.10.1 // indirect
-	github.com/ipfs/kubo v0.36.0 // indirect
 	github.com/ipld/go-car/v2 v2.14.3 // indirect
 	github.com/ipld/go-codec-dagpb v1.7.0 // indirect
 	github.com/ipld/go-ipld-prime v0.21.0 // indirect
@@ -96,7 +95,7 @@ require (
 	github.com/mholt/acmez/v3 v3.0.0 // indirect
 	github.com/miekg/dns v1.1.66 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
@@ -110,9 +109,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
-	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/petar/GoLLRB v0.0.0-20210522233825-ae3b015fd3e9 // indirect
 	github.com/pion/datachannel v1.5.10 // indirect
@@ -165,7 +162,6 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/dig v1.19.0 // indirect
 	go.uber.org/fx v1.24.0 // indirect
@@ -174,7 +170,6 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
@@ -186,10 +181,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )

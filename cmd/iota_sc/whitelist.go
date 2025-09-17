@@ -26,7 +26,7 @@ func newWhitelistCmd() *cobra.Command {
 	cmd.AddCommand(
 		newWhitelistHasCmd(),
 		newWhitelistAddCmd(),
-		//TODO: newWhitelistRemoveCmd(),
+		newWhitelistRemoveCmd(),
 	)
 	return cmd
 }
@@ -106,7 +106,6 @@ func newWhitelistHasCmd() *cobra.Command {
 }
 
 // add <ADDRESS> to whitelist by calling the on-chain function (GC must be active signer).
-// TODO: check if already present and skip creation of transaction if so.
 func newWhitelistAddCmd() *cobra.Command {
 	var member string
 	var pkgID string
@@ -119,7 +118,7 @@ func newWhitelistAddCmd() *cobra.Command {
 		Short: "Add ADDRESS/ID to the whitelist (requires GroundControl signer)",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Whitelist object id
+			// --- Resolve whitelist object ID ---
 			whID := viper.GetString("dcs.whitelist_id")
 			if whID == "" {
 				whID = os.Getenv("DCS_WHITELIST_ID")
@@ -128,7 +127,7 @@ func newWhitelistAddCmd() *cobra.Command {
 				return fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
 			}
 
-			// Member: flag (priority) -> positional
+			// --- Resolve member address ---
 			if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
 				member = mFlag
 			} else if len(args) > 0 {
@@ -139,7 +138,25 @@ func newWhitelistAddCmd() *cobra.Command {
 			}
 			member = strings.ToLower(member)
 
-			// Package ID
+			// --- Check if member is already in whitelist ---
+			out, err := exec.Command("iota", "client", "object", whID, "--json").Output()
+			if err == nil {
+				// Keep only JSON part
+				if i := bytes.IndexAny(out, "{["); i >= 0 {
+					out = out[i:]
+				}
+				fields, err := extractObjectFields(out)
+				if err == nil {
+					if rawWL, ok := fields["whitelist"]; ok {
+						if whitelistContainsAddress(rawWL, member) {
+							fmt.Println("Address is already in the whitelist.")
+							return nil // skip transaction
+						}
+					}
+				}
+			}
+
+			// --- Resolve package ID ---
 			if pkgID == "" {
 				pkgID = viper.GetString("dcs.package_id")
 			}
@@ -150,7 +167,101 @@ func newWhitelistAddCmd() *cobra.Command {
 				return fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
 			}
 
-			// Gas coin + budget
+			// --- Resolve gas ID ---
+			if gasID == "" {
+				gasID = os.Getenv("WALLET_GAS_ID")
+			}
+			if gasID == "" {
+				return fmt.Errorf("set WALLET_GAS_ID env var or --gas (0x...)")
+			}
+
+			// --- Resolve gas budget ---
+			if gasBudget == 0 {
+				if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
+					if v, err := strconv.ParseUint(s, 10, 64); err == nil {
+						gasBudget = v
+					}
+				}
+				if gasBudget == 0 {
+					gasBudget = 10_000_000
+				}
+			}
+
+			if iotaBin == "" {
+				iotaBin = "iota"
+			}
+
+			// --- Build CLI args and call smart contract ---
+			argsv := []string{
+				"client", "call",
+				"--package", pkgID,
+				"--module", "dcs",
+				"--function", "add_id_to_whitelist",
+				"--args", member, whID,
+				"--gas", gasID,
+				"--gas-budget", strconv.FormatUint(gasBudget, 10),
+			}
+			out, err = exec.Command(iotaBin, argsv...).CombinedOutput()
+			os.Stdout.Write(out)
+			if err != nil {
+				return fmt.Errorf("iota client call failed: %w", err)
+			}
+			return nil
+		},
+	}
+
+	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
+	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
+	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
+	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (default: iota)")
+	return c
+}
+
+func newWhitelistRemoveCmd() *cobra.Command {
+	var member string
+	var pkgID string
+	var gasID string
+	var gasBudget uint64
+	var iotaBin string
+
+	c := &cobra.Command{
+		Use:   "remove [ADDRESS]",
+		Short: "Remove ADDRESS/ID from the whitelist (requires GroundControl signer)",
+		Args:  cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 1) Whitelist object ID
+			whID := viper.GetString("dcs.whitelist_id")
+			if whID == "" {
+				whID = os.Getenv("DCS_WHITELIST_ID")
+			}
+			if whID == "" {
+				return fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
+			}
+
+			// 2) Member: flag (priority) -> positional
+			if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
+				member = mFlag
+			} else if len(args) > 0 {
+				member = args[0]
+			}
+			if member == "" {
+				return fmt.Errorf("provide address as positional arg or --member (0x...)")
+			}
+			member = strings.ToLower(member)
+
+			// 3) Package ID (DCS)
+			if pkgID == "" {
+				pkgID = viper.GetString("dcs.package_id")
+			}
+			if pkgID == "" {
+				pkgID = os.Getenv("DCS_PACKAGE_ID")
+			}
+			if pkgID == "" {
+				return fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
+			}
+
+			// 4) Gas coin + budget
 			if gasID == "" {
 				gasID = os.Getenv("WALLET_GAS_ID")
 			}
@@ -168,16 +279,16 @@ func newWhitelistAddCmd() *cobra.Command {
 				}
 			}
 
+			// 5) IOTA client command (remove from whitelist)
 			if iotaBin == "" {
 				iotaBin = "iota"
 			}
 
-			// iota client call --package <pkg> --module dcs --function add_id_to_whitelist --args <member> <whitelist>
 			argsv := []string{
 				"client", "call",
 				"--package", pkgID,
 				"--module", "dcs",
-				"--function", "add_id_to_whitelist",
+				"--function", "remove_id_from_whitelist",
 				"--args", member, whID,
 				"--gas", gasID,
 				"--gas-budget", strconv.FormatUint(gasBudget, 10),
@@ -185,7 +296,7 @@ func newWhitelistAddCmd() *cobra.Command {
 			out, err := exec.Command(iotaBin, argsv...).CombinedOutput()
 
 			// Print raw result
-			//TODO: Clean output
+			//TODO: Clean output if necessary
 			os.Stdout.Write(out)
 			if err != nil {
 				return fmt.Errorf("iota client call failed: %w", err)
@@ -194,8 +305,8 @@ func newWhitelistAddCmd() *cobra.Command {
 		},
 	}
 
-	// Flags (all optional if env is set)
-	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
+	// Flags (optional if env is set)
+	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to remove (0x...)")
 	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
 	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
 	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")

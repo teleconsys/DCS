@@ -21,6 +21,7 @@ func NewCmd() *cobra.Command {
 		newPingCmd(),
 		newAccountCmd(),
 		newWhitelistCmd(),
+		cidCmd(),
 	)
 	return iota_scCmd
 }

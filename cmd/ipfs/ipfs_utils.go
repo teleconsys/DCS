@@ -1,12 +1,15 @@
 package ipfs
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/ipfs/boxo/files"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/kubo/client/rpc"
 	iface "github.com/ipfs/kubo/core/coreiface"
@@ -103,6 +106,38 @@ func GetUnpinnedCID() (string, error) {
 	}
 
 	return unvalidCid, nil
+}
+
+// LoadFileToIPFS loads a file from the local filesystem into IPFS and pins it
+// Returns the IPFS path of the uploaded file
+func LoadFileToIPFS(filePath string) (string, error) {
+	// Read the file
+	fileContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", filePath, err)
+	}
+
+	// Connect to local IPFS node
+	api, err := rpc.NewLocalApi()
+	if err != nil {
+		return "", fmt.Errorf("failed to connect to IPFS node: %w", err)
+	}
+
+	// Add the file to IPFS
+	ctx := context.Background()
+	node := files.NewReaderFile(bytes.NewReader(fileContent))
+	ipfsPath, err := api.Unixfs().Add(ctx, node)
+	if err != nil {
+		return "", fmt.Errorf("failed to add file to IPFS: %w", err)
+	}
+
+	// Pin the content in the IPFS node
+	err = api.Pin().Add(ctx, ipfsPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to pin file: %w", err)
+	}
+
+	return ipfsPath.String(), nil
 }
 
 // ValidateCID checks if a CID is valid and has the correct format, used in the tests

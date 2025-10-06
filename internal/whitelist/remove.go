@@ -1,24 +1,30 @@
 package whitelist
 
+//TODO: WIP: error on call probably due to the response parsing
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/teleconsys/DCS/internal/rebased"
 )
 
 type RemoveParams struct {
-	WhitelistID string
-	Member      string
-	PackageID   string
-	GasID       string
-	GasBudget   uint64
-	IotaBin     string // default "iota"
+	WhitelistID   string
+	Member        string
+	PackageID     string
+	GasID         string
+	GasBudget     uint64
+	RPCURL        string
+	SignerAddress string
 }
 
 func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
@@ -69,30 +75,86 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		p.GasBudget = 10_000_000
 	}
 
-	// iota binary
-	if iotaBin, _ := cmd.Flags().GetString("iota-bin"); iotaBin != "" {
-		p.IotaBin = iotaBin
-	} else {
-		p.IotaBin = "iota"
+	// RPC URL
+	p.RPCURL = viper.GetString("rpc")
+	if p.RPCURL == "" {
+		if u := os.Getenv("REBASE_RPC"); u != "" {
+			p.RPCURL = u
+		} else if u := os.Getenv("DCS_RPC"); u != "" {
+			p.RPCURL = u
+		} else {
+			p.RPCURL = "https://api.testnet.iota.cafe:443"
+		}
 	}
+
+	// signer address
+	if s := os.Getenv("GC_ADDRESS"); s != "" {
+		p.SignerAddress = strings.ToLower(s)
+	}
+	if p.SignerAddress == "" {
+		return p, fmt.Errorf("set GC_ADDRESS (0x...) for signer/fee payer")
+	}
+
 	return p, nil
 }
 
-// RemoveFromWhitelist uses HasAddress() to skip if address is absent; otherwise calls the SC.
+// RemoveFromWhitelist runs fully via RPC: Has -> MoveCallUnsigned -> Sign -> ExecuteTransactionBlock.
 func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPresent bool, err error) {
-	found, err := HasAddress(ctx, HasParams{WhitelistID: p.WhitelistID, Member: p.Member, IotaBin: p.IotaBin})
+	// 1) Dial
+	w, err := rebased.Dial(p.RPCURL)
+	if err != nil {
+		return nil, false, fmt.Errorf("rpc dial failed: %w", err)
+	}
+
+	// 2) Presence check
+	found, err := HasAddress(ctx, HasParams{WhitelistID: p.WhitelistID, Member: p.Member, RPCURL: p.RPCURL})
 	if err == nil && !found {
 		return nil, true, nil // nothing to do
 	}
-	argv := []string{
-		"client", "call",
-		"--package", p.PackageID,
-		"--module", "dcs",
-		"--function", "remove_id_from_whitelist",
-		"--args", p.Member, p.WhitelistID,
-		"--gas", p.GasID,
-		"--gas-budget", strconv.FormatUint(p.GasBudget, 10),
+
+	// 3) Build unsigned
+	txb, err := w.MoveCallUnsigned(
+		ctx,
+		p.SignerAddress,
+		p.PackageID,
+		"dcs",
+		"remove_id_from_whitelist",
+		nil,
+		[]any{p.Member, p.WhitelistID},
+		&p.GasID,
+		p.GasBudget,
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("build move call: %w", err)
 	}
-	out, err = exec.CommandContext(ctx, p.IotaBin, argv...).CombinedOutput()
-	return out, false, err
+
+	// 4) Sign
+	if SignTx == nil {
+		return nil, false, fmt.Errorf("no signer configured: set whitelist.SignTx")
+	}
+	base64Tx := base64.StdEncoding.EncodeToString([]byte(txb.TxBytes)) // <-- convert to base64 string
+	sig, err := SignTx(ctx, base64Tx)
+	if err != nil {
+		return nil, false, fmt.Errorf("sign tx: %w", err)
+	}
+
+	// 5) Submit
+	rsp, err := w.ExecuteTransactionBlock(
+		ctx,
+		base64Tx,
+		[]any{sig},
+		&suitypes.SuiTransactionBlockResponseOptions{
+			ShowEffects:       true,
+			ShowEvents:        true,
+			ShowObjectChanges: true,
+		},
+		suitypes.ExecuteTransactionRequestType("WaitForLocalExecution"),
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("execute: %w", err)
+	}
+
+	// 6) Return JSON
+	b, _ := json.Marshal(rsp)
+	return b, false, nil
 }

@@ -8,6 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	// env loader
+	"github.com/teleconsys/DCS/internal/config"
+
 	// sub-trees
 	"github.com/teleconsys/DCS/cmd/app"
 	"github.com/teleconsys/DCS/cmd/iota_sc"
@@ -44,6 +47,8 @@ func init() {
 }
 
 func initConfig() {
+	config.LoadEnv()
+
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {

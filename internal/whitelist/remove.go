@@ -1,6 +1,5 @@
 package whitelist
 
-//TODO: WIP: error on call probably due to the response parsing
 import (
 	"context"
 	"encoding/base64"
@@ -30,7 +29,6 @@ type RemoveParams struct {
 func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	var p RemoveParams
 
-	// whitelist id
 	p.WhitelistID = viper.GetString("dcs.whitelist_id")
 	if p.WhitelistID == "" {
 		p.WhitelistID = os.Getenv("DCS_WHITELIST_ID")
@@ -39,7 +37,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		return p, fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
 	}
 
-	// member
 	if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
 		p.Member = mFlag
 	} else if len(args) > 0 {
@@ -50,7 +47,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	}
 	p.Member = strings.ToLower(p.Member)
 
-	// package id
 	p.PackageID = viper.GetString("dcs.package_id")
 	if p.PackageID == "" {
 		p.PackageID = os.Getenv("DCS_PACKAGE_ID")
@@ -59,13 +55,11 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
 	}
 
-	// gas id
 	p.GasID = os.Getenv("WALLET_GAS_ID")
 	if p.GasID == "" {
 		return p, fmt.Errorf("set WALLET_GAS_ID env var or --gas (0x...)")
 	}
 
-	// gas budget
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
 		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
 			p.GasBudget = v
@@ -75,7 +69,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		p.GasBudget = 10_000_000
 	}
 
-	// RPC URL
 	p.RPCURL = viper.GetString("rpc")
 	if p.RPCURL == "" {
 		if u := os.Getenv("REBASE_RPC"); u != "" {
@@ -87,7 +80,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		}
 	}
 
-	// signer address
 	if s := os.Getenv("GC_ADDRESS"); s != "" {
 		p.SignerAddress = strings.ToLower(s)
 	}
@@ -98,21 +90,21 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	return p, nil
 }
 
-// RemoveFromWhitelist runs fully via RPC: Has -> MoveCallUnsigned -> Sign -> ExecuteTransactionBlock.
+// RemoveFromWhitelist uses RPC only: Has -> build unsigned -> sign (GC_PRIVATE_KEY) -> execute.
 func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPresent bool, err error) {
-	// 1) Dial
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return nil, false, fmt.Errorf("rpc dial failed: %w", err)
 	}
 
-	// 2) Presence check
 	found, err := HasAddress(ctx, HasParams{WhitelistID: p.WhitelistID, Member: p.Member, RPCURL: p.RPCURL})
 	if err == nil && !found {
-		return nil, true, nil // nothing to do
+		return nil, true, nil
 	}
 
-	// 3) Build unsigned
+	args := []any{p.Member, p.WhitelistID}
+	gasPtr := &p.GasID
+
 	txb, err := w.MoveCallUnsigned(
 		ctx,
 		p.SignerAddress,
@@ -120,41 +112,38 @@ func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPr
 		"dcs",
 		"remove_id_from_whitelist",
 		nil,
-		[]any{p.Member, p.WhitelistID},
-		&p.GasID,
+		args,
+		gasPtr,
 		p.GasBudget,
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("build move call: %w", err)
 	}
 
-	// 4) Sign
-	if SignTx == nil {
-		return nil, false, fmt.Errorf("no signer configured: set whitelist.SignTx")
+	gcKey := os.Getenv("GC_PRIVATE_KEY")
+	if gcKey == "" {
+		return nil, false, fmt.Errorf("GC_PRIVATE_KEY not set")
 	}
-	base64Tx := base64.StdEncoding.EncodeToString([]byte(txb.TxBytes)) // <-- convert to base64 string
-	sig, err := SignTx(ctx, base64Tx)
+
+	rawTx := []byte(txb.TxBytes)                          // sign raw bytes
+	base64Tx := base64.StdEncoding.EncodeToString(rawTx)  // submit as base64
+	sigB64, err := rebased.SignTxBytes(ctx, rawTx, gcKey) // bech32/base64 key supported
 	if err != nil {
 		return nil, false, fmt.Errorf("sign tx: %w", err)
 	}
 
-	// 5) Submit
-	rsp, err := w.ExecuteTransactionBlock(
-		ctx,
-		base64Tx,
-		[]any{sig},
-		&suitypes.SuiTransactionBlockResponseOptions{
-			ShowEffects:       true,
-			ShowEvents:        true,
-			ShowObjectChanges: true,
-		},
-		suitypes.ExecuteTransactionRequestType("WaitForLocalExecution"),
-	)
+	opts := &suitypes.SuiTransactionBlockResponseOptions{
+		ShowEffects:       true,
+		ShowEvents:        true,
+		ShowObjectChanges: true,
+	}
+	reqType := suitypes.ExecuteTransactionRequestType("WaitForLocalExecution")
+
+	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
 		return nil, false, fmt.Errorf("execute: %w", err)
 	}
 
-	// 6) Return JSON
 	b, _ := json.Marshal(rsp)
 	return b, false, nil
 }

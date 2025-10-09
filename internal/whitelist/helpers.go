@@ -1,43 +1,43 @@
 package whitelist
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
+	//"bytes"
+	// "encoding/json"
+	// "fmt"
 	"strings"
 )
 
-// keepJSON drops anything before the first '{' or '['.
-// Some CLIs print banners or warnings before the JSON.
-func keepJSON(b []byte) []byte {
-	if i := bytes.IndexAny(b, "{["); i >= 0 {
-		return b[i:]
-	}
-	return nil
-}
+// // keepJSON drops anything before the first '{' or '['.
+// // Some CLIs print banners or warnings before the JSON.
+// func keepJSON(b []byte) []byte {
+// 	if i := bytes.IndexAny(b, "{["); i >= 0 {
+// 		return b[i:]
+// 	}
+// 	return nil
+// }
 
-// Extract fields map from either shape:
-// 1) root.content.fields (current CLI)
-// 2) root.data.content.fields (legacy)
-func extractObjectFields(jsonBytes []byte) (map[string]any, error) {
-	var root map[string]any
-	if err := json.Unmarshal(jsonBytes, &root); err != nil {
-		return nil, fmt.Errorf("decode object json: %w", err)
-	}
-	if content, ok := root["content"].(map[string]any); ok {
-		if fields, ok := content["fields"].(map[string]any); ok {
-			return fields, nil
-		}
-	}
-	if data, ok := root["data"].(map[string]any); ok {
-		if content, ok := data["content"].(map[string]any); ok {
-			if fields, ok := content["fields"].(map[string]any); ok {
-				return fields, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("fields not found in object JSON")
-}
+// // Extract fields map from either shape:
+// // 1) root.content.fields (current CLI)
+// // 2) root.data.content.fields (legacy)
+// func extractObjectFields(jsonBytes []byte) (map[string]any, error) {
+// 	var root map[string]any
+// 	if err := json.Unmarshal(jsonBytes, &root); err != nil {
+// 		return nil, fmt.Errorf("decode object json: %w", err)
+// 	}
+// 	if content, ok := root["content"].(map[string]any); ok {
+// 		if fields, ok := content["fields"].(map[string]any); ok {
+// 			return fields, nil
+// 		}
+// 	}
+// 	if data, ok := root["data"].(map[string]any); ok {
+// 		if content, ok := data["content"].(map[string]any); ok {
+// 			if fields, ok := content["fields"].(map[string]any); ok {
+// 				return fields, nil
+// 			}
+// 		}
+// 	}
+// 	return nil, fmt.Errorf("fields not found in object JSON")
+// }
 
 // Check presence of address in fields.whitelist
 func whitelistContainsAddress(raw any, address string) bool {

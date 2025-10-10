@@ -9,6 +9,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	// env loader
+	"github.com/teleconsys/DCS/internal/config"
+
 	// sub-trees
 	"github.com/teleconsys/DCS/cmd/app"
 	"github.com/teleconsys/DCS/cmd/iota_sc"
@@ -45,11 +48,7 @@ func init() {
 }
 
 func initConfig() {
-	// Load .env file if it exists
-	if err := godotenv.Load(); err != nil {
-		// noreat this as an error
-		fmt.Fprintln(os.Stderr, "No .env file found :", err)
-	}
+	config.LoadEnv()
 
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)

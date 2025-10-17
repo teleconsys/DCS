@@ -1,12 +1,12 @@
 package iota_sc
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/teleconsys/DCS/cmd/ipfs"
+	cid_sc "github.com/teleconsys/DCS/internal/cid"
 )
 
 func cidCmd() *cobra.Command {
@@ -45,10 +45,10 @@ Examples:
   iota_sc cid create --type path /path/to/your/file.txt --coins 1000000 --epoch-start 1000 --epoch-end 2000`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var cid string
+			var cidStr string
 			var err error
 
-			// Check if -file flag is used
+			// Check input type
 			inputType, _ := cmd.Flags().GetString("type")
 
 			if inputType != "path" && inputType != "cid" {
@@ -71,102 +71,53 @@ Examples:
 				}
 
 				// Extract CID from IPFS path (remove /ipfs/ prefix if present)
-				cid = strings.TrimPrefix(ipfsPath, "/ipfs/")
-				cmd.Printf("✅ File uploaded to IPFS with CID: %s\n", cid)
+				cidStr = strings.TrimPrefix(ipfsPath, "/ipfs/")
+				cmd.Printf("✅ File uploaded to IPFS with CID: %s\n", cidStr)
 			} else {
 				if len(args) == 0 {
 					cmd.PrintErr("Error: provide a CID as argument\n")
 					return cmd.Usage()
 				}
 				// Use CID from argument
-				cid = args[0]
-				cmd.Printf("Using provided CID: %s\n", cid)
-				
-				// Convert CID to hexadecimal
-				// cidHex, err := cidToHex(cid)
-				// if err != nil {
-				// 	cmd.PrintErrf("Failed to convert CID to hex: %v\n", err)
-				// 	return err
-				// }
-				// cid = cidHex
-				// cmd.Printf("Converted CID to hex: %s\n", cid)
+				cidStr = args[0]
+				cmd.Printf("Using provided CID: %s\n", cidStr)
 			}
 
-			// Get required parameters from flags
-			epochStart, _ := cmd.Flags().GetUint64("epoch-start")
-			epochEnd, _ := cmd.Flags().GetUint64("epoch-end")
-
-			// Validate required parameters
-			if epochStart == 0 {
-				cmd.PrintErr("Error: --epoch-start parameter is required\n")
-				return cmd.Usage()
-			}
-			if epochEnd == 0 {
-				cmd.PrintErr("Error: --epoch-end parameter is required\n")
-				return cmd.Usage()
-			}
-
-			// Get whitelist ID
-			whID, err := GetWhitelistID()
+			// Load parameters using the new wrapper
+			params, err := cid_sc.LoadCreateParams(cmd, []string{cidStr})
 			if err != nil {
+				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
 
-			coinID, err := GetGasCoinID()
+			// Split coin first to get the coin ID for CID creation
+			cmd.Printf("Splitting coin for CID creation...\n")
+			cidCoinId, err := cid_sc.SplitCoinDummy(cmd.Context(), params, params.GasID, 4800000)
 			if err != nil {
+				cmd.PrintErrf("Failed to split coin: %v\n", err)
 				return err
 			}
+			cmd.Printf("✅ Coin split successfully, new coin ID: %s\n", cidCoinId)
 
-			owner, err := cmd.Flags().GetString("owner")
-			if err != nil {
-				return err
-			}
-
-			// Execute IOTA command to create CID object
-			config := IOTACommandConfig{
-				Module:   "dcs",
-				Function: "create_cid",
-				Args:     []string{cid, coinID, fmt.Sprintf("%d", epochStart), fmt.Sprintf("%d", epochEnd), whID},
-				Account:  owner,
-			}
-
-			// Execute create_cid and capture output to get the CID object ID
-			output, err := executeScFunction(config)
+			// Create CID object using new wrapper
+			cmd.Printf("Creating CID object...\n")
+			_, cidId, err := cid_sc.CreateCID(cmd.Context(), params, cidCoinId)
 			if err != nil {
 				cmd.PrintErrf("Failed to create CID object: %v\n", err)
 				return err
 			}
 
-			// Extract CID object ID from the output
-			cidId, err := extractCidId(output)
-			if err != nil {
-				cmd.PrintErrf("Failed to extract CID object ID: %v\n", err)
-				return err
-			}
-
 			cmd.Printf("✅ CID object created with ID: %s\n", cidId)
+			cmd.Printf("✅ Coin ID created for CID object: %s\n", cidCoinId)
 
-			// Get CID list ID
-			cidListID, err := GetCIDListID()
-			if err != nil {
-				cmd.PrintErrf("Failed to get CID list ID: %v\n", err)
-				return err
-			}
-
-			// Execute IOTA command to add CID to CID list
-			addToListConfig := IOTACommandConfig{
-				Module:   "dcs",
-				Function: "add_to_cidlist",
-				Args:     []string{cidId, cidListID},
-			}
-
-			_, err = executeScFunction(addToListConfig)
+			// Add CID to CID list using new wrapper
+			cmd.Printf("Adding CID to CID list...\n")
+			_, err = cid_sc.AddToCIDList(cmd.Context(), params, cidId)
 			if err != nil {
 				cmd.PrintErrf("Failed to add CID id to CID list: %v\n", err)
 				return err
 			}
 
-			
 			cmd.Printf("✅ CID id %s successfully added to CID list\n", cidId)
 			return nil
 		},
@@ -174,15 +125,17 @@ Examples:
 
 	// Add flags
 	cmd.Flags().String("type", "", "Type of input (path or cid)")
-	cmd.Flags().String("owner", "", "IOTA address of the owner of the CID object (required)")
 	cmd.Flags().Uint64("epoch-start", 0, "Next epoch start timestamp (required)")
 	cmd.Flags().Uint64("epoch-end", 0, "Next epoch end timestamp (required)")
+	cmd.Flags().String("user-address", "", "Address of the user (overwrite USER_ADDRESS env var)")
+	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides USER_PRIVATE_KEY env var)")
+	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite USER_GAS_COIN_ID env var)")
+
 	
 	// Mark required flags
 	cmd.MarkFlagRequired("type")
 	cmd.MarkFlagRequired("epoch-start")
 	cmd.MarkFlagRequired("epoch-end")
-	cmd.MarkFlagRequired("owner")
 	return cmd
 }
 
@@ -191,70 +144,37 @@ Examples:
 */
 func removeCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "remove --cid-type <id|cid> [CIDID]",
+		Use:   "remove --cid-type <objectId|cid> [objectId|cid]",
 		Short: "Remove a CID listed in the smart contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			cidType, err := cmd.Flags().GetString("cid-type")
+			// Load parameters using the new wrapper
+			params, err := cid_sc.LoadRemoveParams(cmd, args)
 			if err != nil {
+				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
 
-			// Validate cidType
-			if cidType != "id" && cidType != "cid" {
-				cmd.PrintErrf("Error: cid-type must be either 'id' or 'cid', got: %s\n", cidType)
-				return cmd.Usage()
-			}
-
-			var cidId string
-
-			// Set the cidId
-			if cidType == "id" {
-				cidId = args[0]
-			} else {
-				cidStr := args[0]
-
-				// Get the CID object ID from the CIDlist
-				cidId, err = getCidIdFromList(cidStr)
-				if err != nil {
-					cmd.PrintErrf("Failed to find CID object: %v\n", err)
-					return err
-				}
-			}
-
-
-			// Get the CIDlist ID
-			cidListID, err := GetCIDListID()
-			if err != nil {
-				return err
-			}
-
-			// Execute IOTA command to remove CID from CIDlist
-			funcExec := IOTACommandConfig{
-				Module:   "dcs",
-				Function: "remove_from_cidlist",
-				Args:     []string{cidId, cidListID},
-				Account:  "0xb536e8aad181525e772111eeed764f7c92b8502b9692d705fae643157e5d445d",
-			}
-
-			_, err = executeScFunction(funcExec)
+			// Remove CID using new wrapper
+			_, err = cid_sc.RemoveCID(cmd.Context(), params)
 			if err != nil {
 				cmd.PrintErrf("Failed to remove CID from CID list: %v\n", err)
 				return err
 			}
 
-			cmd.Printf("✅ Object with CID id %s successfully removed from CID list\n", cidId)
+			cmd.Printf("✅ Object with CID id %s successfully removed from CID list\n", params.CIDId)
 			return nil
 		},
 	}
 
 	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
+	cmd.Flags().String("user-address", "", "Address of the user (overwrite USER_ADDRESS env var)")
+	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides USER_PRIVATE_KEY env var)")
+	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite USER_GAS_COIN_ID env var)")
+
+
 	cmd.MarkFlagRequired("cid-type")
-
 	return cmd
-
-
 }
 
 /*
@@ -262,53 +182,29 @@ func removeCidCmd() *cobra.Command {
 */
 func isInListCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "is-in-list --cid-type <id|cid> [CIDID]",
+		Use:   "is-in-list --cid-type <objectId|cid> [objectId|cid]",
 		Short: "Check if a CID ID is listed in the smart contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			cidType, err := cmd.Flags().GetString("cid-type")
+			// Load parameters using the new wrapper
+			params, err := cid_sc.LoadIsInListParams(cmd, args)
 			if err != nil {
+				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
 
-			// Validate cidType
-			if cidType != "id" && cidType != "cid" {
-				cmd.PrintErrf("Error: cid-type must be either 'id' or 'cid', got: %s\n", cidType)
-				return cmd.Usage()
+			// Check if CID is in list using new wrapper
+			found, err := cid_sc.IsInList(cmd.Context(), params)
+			if err != nil {
+				cmd.PrintErrf("Failed to check CID list: %v\n", err)
+				return err
 			}
 
-			var cidId string
-
-			// Set the cidId
-			if cidType == "id" {
-				cidId = args[0]
+			if found {
+				cmd.Printf("✅ CID object %s is in CID list\n", params.CIDId)
 			} else {
-				cidStr := args[0]
-
-				// Get the CID object ID from the CIDlist
-				cidId, err = getCidIdFromList(cidStr)
-				if err != nil {
-					cmd.PrintErrf("Failed to find CID object: %v\n", err)
-					return err
-				}
+				cmd.Printf("✅ CID object %s is not in CID list\n", params.CIDId)
 			}
-
-
-			cidList, err := getCidList()
-			if err != nil {
-				cmd.PrintErrf("Failed to get CID list: %v\n", err)
-				return err
-			}
-
-			for _, cid := range cidList {
-				if cid == cidId {
-					cmd.Printf("✅ CID object %s is in CID list\n", cidId)
-					return nil
-				}
-			}
-
-			cmd.Printf("✅ CID object %s is not in CID list\n", cidId)
 			return nil
 		},
 	}

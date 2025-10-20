@@ -6,112 +6,135 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/sha3"
 )
 
-const (
-	defaultFaucet = "https://faucet.testnet.iota.cafe/gas"
-	keyStoreDir   = ".dcs"        // under user home
-	keyFileName   = "keypair.hex" // privkey||pubkey hex, 64+64 bytes
-)
-
-// newAccountCmd wires `iota-sc account`
+// Command: dcs iota_sc account new --alias <name> [--no_faucet] [--faucet-amount <n>]
 func newAccountCmd() *cobra.Command {
-	var (
-		privHex   string
-		noFaucet  bool
-		faucetURL string
-	)
+	var alias string
+	var noFaucet bool
+	var faucetAmount uint64
 
 	cmd := &cobra.Command{
 		Use:   "account",
-		Short: "Create or import an IOTA Rebased Ed25519 account and optionally fund it",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			var priv ed25519.PrivateKey
-			// import or generate address
-			if privHex != "" {
-				pb, err := hex.DecodeString(privHex)
-				if err != nil || len(pb) != ed25519.PrivateKeySize {
-					return fmt.Errorf("invalid --private-key hex")
-				}
-				priv = ed25519.PrivateKey(pb)
-			} else {
-				_, p, err := ed25519.GenerateKey(rand.Reader)
-				if err != nil {
-					return err
-				}
-				priv = p
+		Short: "Account utilities (local key generation + optional faucet)",
+	}
+
+	newCmd := &cobra.Command{
+		Use:   "new",
+		Short: "Generate an ed25519 keypair and address; optionally fund via faucet from .env",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if strings.TrimSpace(alias) == "" {
+				return errors.New("missing --alias")
 			}
 
-			pub := priv.Public().(ed25519.PublicKey)
-			addr := moveAddress(pub)
-
-			// persist for next runs
-			if err := saveKeypair(priv, pub); err != nil {
-				cmd.Printf("⚠  could not save keypair locally: %v\n", err)
+			// 1) Generate ed25519 keypair.
+			pub, priv, err := ed25519.GenerateKey(rand.Reader)
+			if err != nil {
+				return fmt.Errorf("generate key: %w", err)
 			}
 
-			cmd.Printf("✅ address: %s\n", addr)
+			// 2) Derive address: 0x + sha3-256(pub).
+			addr := deriveAddress(pub)
 
-			// faucet request
+			// 3) Save to ./accounts/<alias>.json (relative to execution folder).
+			wd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("resolve working dir: %w", err)
+			}
+			dir := filepath.Join(wd, "accounts")
+			// Safe even if it already exists.
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return fmt.Errorf("mkdir %s: %w", dir, err)
+			}
+			outPath := filepath.Join(dir, alias+".json")
+			if _, err := os.Stat(outPath); err == nil {
+				return fmt.Errorf("account file already exists: %s", outPath)
+			}
+
+			payload := struct {
+				Alias      string `json:"alias"`
+				Address    string `json:"address"`
+				PublicKey  string `json:"public_key"`  // hex
+				PrivateKey string `json:"private_key"` // hex (keep secret)
+			}{
+				Alias:      alias,
+				Address:    addr,
+				PublicKey:  hex.EncodeToString(pub),
+				PrivateKey: hex.EncodeToString(priv),
+			}
+			b, _ := json.MarshalIndent(payload, "", "  ")
+			if err := os.WriteFile(outPath, b, 0o600); err != nil {
+				return fmt.Errorf("write %s: %w", outPath, err)
+			}
+
+			// 4) Print essentials.
+			cmd.Println("account created")
+			cmd.Printf("alias:   %s\n", alias)
+			cmd.Printf("address: %s\n", addr)
+			cmd.Printf("privkey: %s\n", hex.EncodeToString(priv))
+			cmd.Printf("saved:   %s\n", outPath)
+
+			// 5) Optional faucet funding via .env variable FAUCET_URL.
 			if noFaucet {
 				return nil
 			}
+			faucetURL := os.Getenv("FAUCET_URL") // loaded by internal/config/dotenv.go
 			if faucetURL == "" {
-				faucetURL = defaultFaucet
+				return errors.New("FAUCET_URL not set in environment/.env; use --no_faucet to skip")
 			}
-			if err := hitFaucet(faucetURL, addr); err != nil {
-				return fmt.Errorf("faucet: %w", err)
+			if err := faucetRequest(faucetURL, addr, faucetAmount); err != nil {
+				return fmt.Errorf("faucet request failed: %w", err)
 			}
-			cmd.Println("🚰 faucet request accepted")
+			cmd.Println("faucet: requested")
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVar(&privHex, "private-key", "", "hex-encoded 64-byte Ed25519 private key to import")
-	cmd.Flags().BoolVar(&noFaucet, "no-faucet", false, "skip asking the faucet for funds")
-	cmd.Flags().StringVar(&faucetURL, "faucet-url", "", "override faucet endpoint")
+	newCmd.Flags().StringVar(&alias, "alias", "", "Account alias; saved as $HOME/DCS/accounts/<alias>.json")
+	newCmd.Flags().BoolVar(&noFaucet, "no_faucet", false, "Do not call the faucet even if FAUCET_URL is set")
+	newCmd.Flags().Uint64Var(&faucetAmount, "faucet-amount", 0, "Optional amount to request from faucet")
+	cmd.AddCommand(newCmd)
 	return cmd
 }
 
-// moveAddress = 0x + sha3-256(pubkey)
-func moveAddress(pub ed25519.PublicKey) string {
-	h := sha3.Sum256(pub)
-	return "0x" + hex.EncodeToString(h[:])
+// 0x + sha3-256(pubkey) in lowercase hex.
+func deriveAddress(pub ed25519.PublicKey) string {
+	h := sha3.New256()
+	h.Write(pub)
+	sum := h.Sum(nil)
+	return "0x" + strings.ToLower(hex.EncodeToString(sum))
 }
 
-// saveKeypair writes keypair to $HOME/.dcs/keypair.hex (idempotent)
-func saveKeypair(priv ed25519.PrivateKey, pub ed25519.PublicKey) error {
-	home, _ := os.UserHomeDir()
-	path := filepath.Join(home, keyStoreDir, keyFileName)
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
+func faucetRequest(base, addr string, amt uint64) error {
+	// Ensure /gas endpoint
+	u := strings.TrimRight(base, "/") + "/gas"
+
+	type fixed struct {
+		Recipient string `json:"recipient"`
+		Amount    string `json:"amount,omitempty"`
 	}
-	buf := make([]byte, 0, 2*ed25519.PrivateKeySize)
-	buf = append(buf, hex.EncodeToString(priv)...)
-	buf = append(buf, '\n')
-	buf = append(buf, hex.EncodeToString(pub)...)
-	return os.WriteFile(path, buf, 0o600)
-}
+	body := map[string]any{
+		"FixedAmountRequest": fixed{Recipient: addr},
+	}
+	if amt > 0 {
+		body["FixedAmountRequest"] = fixed{
+			Recipient: addr,
+			Amount:    fmt.Sprintf("%d", amt),
+		}
+	}
 
-// hitFaucet POSTs { "FixedAmountRequest": { "recipient": "<addr>" } }.
-func hitFaucet(url, addr string) error {
-	payload := struct {
-		FixedAmountRequest struct {
-			Recipient string `json:"recipient"`
-		} `json:"FixedAmountRequest"`
-	}{}
-	payload.FixedAmountRequest.Recipient = addr
-
-	b, _ := json.Marshal(payload)
-	resp, err := http.Post(url, "application/json", bytes.NewReader(b))
+	b, _ := json.Marshal(body)
+	resp, err := http.Post(u, "application/json", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}

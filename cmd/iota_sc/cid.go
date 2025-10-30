@@ -231,7 +231,7 @@ func transitionEpochCmd() *cobra.Command {
 				return err
 			}
 
-			result, err := cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
+			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
 
 			if err != nil {
 				cmd.PrintErrf("Failed to transition epoch: %v\n", err)

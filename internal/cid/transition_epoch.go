@@ -1,4 +1,4 @@
-package epochs
+package cid
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	cid_sc "github.com/teleconsys/DCS/internal/cid"
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
@@ -21,12 +20,22 @@ type TransitionParams struct {
 	UserSignerAddress string
 	UserPrivateKey string
 	PackageID string
+	CIDType string
 }
 
 func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, error) {
 	var p TransitionParams
 
+	cidType, err := cmd.Flags().GetString("cid-type")
+	if err != nil {
+		return p, err
+	}
 
+	// Validate cidType
+	if cidType != "id" && cidType != "cid" {
+		return p, fmt.Errorf("cid-type must be either 'id' or 'cid', got: %s", cidType)
+	}
+	p.CIDType = cidType
 	// Get package ID
 	p.PackageID = viper.GetString("dcs.package_id")
 	if p.PackageID == "" {
@@ -88,7 +97,17 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 
 func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool, error) {
 
-	CID, err := cid_sc.GetCIDIdFromList(ctx, cid, p.RPCURL)
+	CID := cid
+	var err error
+
+	if p.CIDType == "cid" {
+		CID, err = GetCIDIdFromList(ctx, cid, p.RPCURL)
+		if err != nil {
+			return false, fmt.Errorf("failed to get CID ID: %w", err)
+		}
+	}
+
+	
 	if err != nil {
 		return false, fmt.Errorf("failed to get CID ID: %w", err)
 	}

@@ -1,6 +1,7 @@
 package iota_sc
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,6 +20,7 @@ func cidCmd() *cobra.Command {
 		createCidCmd(),
 		removeCidCmd(),
 		isInListCidCmd(),
+		transitionEpochCmd(),
 	)
 	return cmd
 }
@@ -209,6 +211,38 @@ func isInListCidCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
+	cmd.MarkFlagRequired("cid-type")
+
+	return cmd
+}
+
+func transitionEpochCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "next-epoch --cid-type <objectId|cid> [objectId|cid]",
+		Short: "Transition to the next epoch",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// Load parameters using the new wrapper
+			params, err := cid_sc.LoadTransitionParams(cmd, args)
+			if err != nil {
+				cmd.PrintErrf("Failed to load parameters: %v\n", err)
+				return err
+			}
+
+			result, err := cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
+
+			if err != nil {
+				cmd.PrintErrf("Failed to transition epoch: %v\n", err)
+				return err
+			}
+
+			fmt.Printf("Epoch transition successful\n")
+			return nil
+		},
+	}
+	
 	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
 	cmd.MarkFlagRequired("cid-type")
 

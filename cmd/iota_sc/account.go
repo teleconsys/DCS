@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -15,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/sha3"
+	"golang.org/x/crypto/blake2b"
 )
 
 // Command: dcs iota_sc account new --alias <name> [--no_faucet] [--faucet-amount <n>]
@@ -107,12 +108,10 @@ func newAccountCmd() *cobra.Command {
 	return cmd
 }
 
-// 0x + sha3-256(pubkey) in lowercase hex.
+// 0x + blake2b-256( 0x00 || pubkey )  -- 0x00 is the Ed25519 scheme flag
 func deriveAddress(pub ed25519.PublicKey) string {
-	h := sha3.New256()
-	h.Write(pub)
-	sum := h.Sum(nil)
-	return "0x" + strings.ToLower(hex.EncodeToString(sum))
+	sum := blake2b.Sum256(pub)
+	return "0x" + hex.EncodeToString(sum[:])
 }
 
 func faucetRequest(base, addr string, amt uint64) error {

@@ -108,7 +108,7 @@ func newAccountCmd() *cobra.Command {
 	return cmd
 }
 
-// 0x + blake2b-256( 0x00 || pubkey )  -- 0x00 is the Ed25519 scheme flag
+// Ed25519 address = 0x + blake2b-256(pubkey)
 func deriveAddress(pub ed25519.PublicKey) string {
 	sum := blake2b.Sum256(pub)
 	return "0x" + hex.EncodeToString(sum[:])

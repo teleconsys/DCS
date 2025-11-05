@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"time"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
@@ -17,17 +18,17 @@ import (
 )
 
 type CreateParams struct {
-	CID           		string
-	EpochStart    		uint64
-	EpochEnd      		uint64
-	WhitelistID   		string
-	CIDListID     		string
-	PackageID     		string
-	GasID         		string
-	GasBudget     		uint64
-	RPCURL        		string
-	UserSignerAddress 	string
-	UserPrivateKey 		string
+	CID               string
+	EpochStart        uint64
+	EpochEnd          uint64
+	WhitelistID       string
+	CIDListID         string
+	PackageID         string
+	GasID             string
+	GasBudget         uint64
+	RPCURL            string
+	UserSignerAddress string
+	UserPrivateKey    string
 }
 
 func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
@@ -43,6 +44,25 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	epochEnd, _ := cmd.Flags().GetUint64("epoch-end")
 	p.EpochStart = epochStart
 	p.EpochEnd = epochEnd
+
+	// Auto-compute epochs when user passes 0 (no pre-computation needed)
+	if p.EpochStart == 0 || p.EpochEnd == 0 {
+		now := uint64(time.Now().UnixMilli())
+
+		// Defaults: start in +30 minutes, end 20 minutes after start.
+		// (This gives you ~40 minutes from now to submit offers:
+		//  window is open until start + 10 minutes per the Move guard.)
+		const startOffsetMinutes = 30
+		const windowAfterStartMinutes = 20
+
+		p.EpochStart = now + startOffsetMinutes*60*1000
+		p.EpochEnd = p.EpochStart + windowAfterStartMinutes*60*1000
+
+		// Echo so you can see what got used
+		fmt.Fprintf(cmd.OutOrStdout(),
+			"auto-epochs: now=%d start=%d end=%d (offset=%dmin window=%dmin)\n",
+			now, p.EpochStart, p.EpochEnd, startOffsetMinutes, windowAfterStartMinutes)
+	}
 
 	// Get package ID
 	p.PackageID = viper.GetString("dcs.package_id")
@@ -75,7 +95,7 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
 	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv		
+		p.UserPrivateKey = userPrivateKeyEnv
 	} else {
 		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
@@ -84,7 +104,7 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
 		p.UserSignerAddress = signerAddress
 	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv		
+		p.UserSignerAddress = userAddressEnv
 	} else {
 		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
 	}
@@ -180,7 +200,7 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0xab8bc9ecfd229cc2fcec04e6318ee9c559ae3e4c5232066f6a39fe960fd1ef39", nil
+	return "0x688de3789d6f0fa807b9125d6b79f352dc8b991daa3c84c742a4899c7199b842", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {
@@ -330,11 +350,11 @@ func extractCidIdFromResponse(rsp *suitypes.SuiTransactionBlockResponse) (string
 	// Look for all object IDs in the JSON
 	re := regexp.MustCompile(`"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
 	matches := re.FindAllStringSubmatch(string(b), -1)
-	
+
 	if len(matches) == 0 {
 		return "", fmt.Errorf("no object ID found in transaction response")
 	}
-	
+
 	// Return the objectId from the LAST match (last index in the array)
 	lastMatch := matches[len(matches)-1]
 	if len(lastMatch) > 1 {
@@ -343,4 +363,3 @@ func extractCidIdFromResponse(rsp *suitypes.SuiTransactionBlockResponse) (string
 
 	return "", fmt.Errorf("no CID object ID found in transaction response")
 }
-

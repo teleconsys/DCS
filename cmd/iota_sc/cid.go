@@ -94,7 +94,7 @@ Examples:
 
 			// Split coin first to get the coin ID for CID creation
 			cmd.Printf("Splitting coin for CID creation...\n")
-			cidCoinId, err := cid_sc.SplitCoinDummy(cmd.Context(), params, params.GasID, 4800000)
+			cidCoinId, err := cid_sc.SplitCoin(cmd.Context(), params, params.GasID, 4800000)
 			if err != nil {
 				cmd.PrintErrf("Failed to split coin: %v\n", err)
 				return err

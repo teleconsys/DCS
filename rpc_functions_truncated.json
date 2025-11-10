@@ -1,0 +1,109 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "openrpc": "1.2.6",
+    "info": {
+      "title": "IOTA JSON-RPC",
+      "description": "IOTA JSON-RPC API for interaction with IOTA full node or indexer. Make RPC calls using https://api.NETWORK.iota.cafe:443 (or https://indexer.NETWORK.iota.cafe:443 for the indexer), where NETWORK is the network you want to use (testnet, devnet, mainnet). By default, local networks use port 9000 (or 9124 for the indexer).",
+      "contact": {
+        "name": "IOTA Foundation",
+        "url": "https://iota.org",
+        "email": "info@iota.org"
+      },
+      "license": {
+        "name": "Apache-2.0",
+        "url": "https://raw.githubusercontent.com/iotaledger/iota/main/LICENSE"
+      },
+      "version": "1.10.0-rc"
+    },
+    "methods": [
+      {
+        "name": "unsafe_splitCoin",
+        "tags": [{ "name": "Transaction Builder API" }],
+        "description": "Create an unsigned transaction to split a coin object into multiple coins.",
+        "params": [
+          {
+            "name": "signer",
+            "description": "the transaction signer's IOTA address",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/IotaAddress" }
+          },
+          {
+            "name": "coin_object_id",
+            "description": "the coin object to be spilt",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/ObjectID" }
+          },
+          {
+            "name": "split_amounts",
+            "description": "the amounts to split out from the coin",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": { "$ref": "#/components/schemas/BigInt_for_uint64" }
+            }
+          },
+          {
+            "name": "gas",
+            "description": "gas object to be used in this transaction, node will pick one from the signer's possession if not provided",
+            "schema": { "$ref": "#/components/schemas/ObjectID" }
+          },
+          {
+            "name": "gas_budget",
+            "description": "the gas budget, the transaction will fail if the gas cost exceed the budget",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/BigInt_for_uint64" }
+          }
+        ],
+        "result": {
+          "name": "TransactionBlockBytes",
+          "required": true,
+          "schema": { "$ref": "#/components/schemas/TransactionBlockBytes" }
+        }
+      },
+      {
+        "name": "unsafe_splitCoinEqual",
+        "tags": [{ "name": "Transaction Builder API" }],
+        "description": "Create an unsigned transaction to split a coin object into multiple equal-size coins.",
+        "params": [
+          {
+            "name": "signer",
+            "description": "the transaction signer's IOTA address",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/IotaAddress" }
+          },
+          {
+            "name": "coin_object_id",
+            "description": "the coin object to be spilt",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/ObjectID" }
+          },
+          {
+            "name": "split_count",
+            "description": "the number of coins to split into",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/BigInt_for_uint64" }
+          },
+          {
+            "name": "gas",
+            "description": "gas object to be used in this transaction, node will pick one from the signer's possession if not provided",
+            "schema": { "$ref": "#/components/schemas/ObjectID" }
+          },
+          {
+            "name": "gas_budget",
+            "description": "the gas budget, the transaction will fail if the gas cost exceed the budget",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/BigInt_for_uint64" }
+          }
+        ],
+        "result": {
+          "name": "TransactionBlockBytes",
+          "required": true,
+          "schema": { "$ref": "#/components/schemas/TransactionBlockBytes" }
+        }
+      }
+    ],
+    "components": {}
+  }
+}

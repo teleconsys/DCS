@@ -140,31 +140,88 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 }
 
 // splitCoin splits a coin into multiple coins with specified amounts
+// func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
+// 	w, err := rebased.Dial(p.RPCURL)
+// 	if err != nil {
+// 		return "", fmt.Errorf("rpc dial failed: %w", err)
+// 	}
+
+// 	gasPtr := &p.GasID
+
+// 	// Build unsigned transaction
+// 	txb, err := w.SplitCoinUnsigned(
+// 		ctx,
+// 		p.UserSignerAddress,
+// 		coinID,
+// 		[]uint64{uint64(amount)},
+// 		gasPtr,
+// 		p.GasBudget,
+// 	)	
+// 	if err != nil {
+// 		return "", fmt.Errorf("build move call: %w", err)
+// 	}
+
+// 	// Sign transaction
+// 	rawTx := []byte(txb.TxBytes)
+// 	base64Tx := base64.StdEncoding.EncodeToString(rawTx)
+// 	sigB64, err := rebased.SignTxBytes(ctx, rawTx, p.UserPrivateKey)
+// 	if err != nil {
+// 		return "", fmt.Errorf("sign tx: %w", err)
+// 	}
+
+// 	// Execute transaction
+// 	opts := &suitypes.SuiTransactionBlockResponseOptions{
+// 		ShowEffects:       true,
+// 		ShowEvents:        true,
+// 		ShowObjectChanges: true,
+// 	}
+// 	reqType := suitypes.ExecuteTransactionRequestType("WaitForLocalExecution")
+
+// 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
+// 	if err != nil {
+// 		return "", fmt.Errorf("execute: %w", err)
+// 	}
+
+// 	fmt.Println(rsp)
+
+// 	// Extract new coin ID from response
+// 	newCoinID, err := extractNewCoinIdFromResponse(rsp)
+// 	if err != nil {
+// 		return "", fmt.Errorf("extract new coin ID: %w", err)
+// 	}
+
+// 	return newCoinID, nil
+// }
+
 func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return "", fmt.Errorf("rpc dial failed: %w", err)
 	}
 
-	// Build arguments for split_coin function
-	// The IOTA framework split_coin function typically takes:
-	// - coin_id: the ID of the coin to split
-	// - amounts: vector of amounts to split into
-	args := []any{coinID, fmt.Sprintf("%d", amount)}
 	gasPtr := &p.GasID
 
+	// 	txb, err := w.PaySuiUnsigned(
+	// 	ctx,
+	// 	p.UserSignerAddress,
+	// 	[]string{coinID},
+	// 	[]string{p.UserSignerAddress},
+	// 	[]uint64{uint64(amount)},
+	// 	p.GasBudget,
+	// )	
+	// if err != nil {
+	// 	return "", fmt.Errorf("build pay sui call: %w", err)
+	// }
+
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.SplitCoinUnsignedRPC(
 		ctx,
 		p.UserSignerAddress,
-		"0x2", // IOTA framework package ID
-		"iota",
-		"split-coin",
-		nil,
-		args,
+		coinID,
+		[]uint64{uint64(amount)},
 		gasPtr,
 		p.GasBudget,
-	)
+	)	
 	if err != nil {
 		return "", fmt.Errorf("build move call: %w", err)
 	}
@@ -190,6 +247,8 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 		return "", fmt.Errorf("execute: %w", err)
 	}
 
+	fmt.Println(rsp)
+
 	// Extract new coin ID from response
 	newCoinID, err := extractNewCoinIdFromResponse(rsp)
 	if err != nil {
@@ -200,7 +259,7 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0x688de3789d6f0fa807b9125d6b79f352dc8b991daa3c84c742a4899c7199b842", nil
+		return "0xe79a28cb2fa14816279b97301b596983ae62f22a2eac3f5adedde134e9a01e99", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {

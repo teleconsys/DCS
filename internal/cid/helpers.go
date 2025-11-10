@@ -143,7 +143,7 @@ func GetCIDIdFromList(ctx context.Context, cidStr, rpcURL string) (string, error
 		}
 	}
 
-	return "", fmt.Errorf("CID %s not found in CIDlist", cidStr)
+	return "", nil
 }
 
 // GetCIDListID retrieves the CID list ID from config or environment

@@ -23,6 +23,7 @@ func NewCmd() *cobra.Command {
 		newWhitelistCmd(),
 		cidCmd(),
 		NewSubmitOfferCmd(),
+		NewApproveOfferCmd(),
 	)
 	return iota_scCmd
 }

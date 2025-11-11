@@ -10,58 +10,46 @@ import (
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
-type SubmitOfferParams struct {
-	// target
-	CIDObjectID string // 0x... (CID object id)
-	Amount      uint64 // IOTA nanos
+type ApproveOfferParams struct {
+	CIDObjectID string // 0x... (CID id)
+	Index       uint64 // offer index in next_epoch_offers
+	ClockID     string // 0x6 on testnet
 
-	// shared objects
-	WhitelistID string // 0x... (&Whitelist)
-	ClockID     string // 0x6 on testnet (&Clock)
-
-	// execution
-	PackageID string // 0x... (Move package)
-	GasID     string // 0x... (signer’s gas coin)
+	PackageID string
+	GasID     string
 	GasBudget uint64
 	RPCURL    string
 
-	// signer (provider)
-	Signer  string // 0x...
+	Signer  string // CID owner 0x...
 	PrivKey string // iotaprivkey1...
 
-	// debug
 	Debug bool
 }
 
-// SubmitReplicaOffer builds, signs, executes:
-//
-//	<PackageID>::dcs::create_offer(&mut CID, u64, &Whitelist, &Clock, &mut TxContext)
-func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.SuiTransactionBlockResponse, error) {
+// Calls: <PackageID>::dcs::approve_offer(&mut CID, u64, &Clock, &mut TxContext)
+func ApproveOffer(ctx context.Context, p ApproveOfferParams) (*suitypes.SuiTransactionBlockResponse, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return nil, fmt.Errorf("rpc dial: %w", err)
 	}
 
-	// u64 must be sent as a decimal string for this RPC
-	amountStr := strconv.FormatUint(p.Amount, 10)
-
+	// u64 must be a decimal string for this RPC
+	idxStr := strconv.FormatUint(p.Index, 10)
 	args := []any{
 		p.CIDObjectID, // &mut CID (shared)
-		amountStr,     // u64 as string
-		p.WhitelistID, // &Whitelist (shared)
+		idxStr,        // u64 as string
 		p.ClockID,     // &Clock (shared)
 	}
 
 	if p.Debug {
-		fmt.Println("== create_offer args ==")
+		fmt.Println("== approve_offer args ==")
 		fmt.Printf("CID: %s\n", p.CIDObjectID)
-		fmt.Printf("Amount (nanos): %s\n", amountStr)
-		fmt.Printf("WhitelistID: %s\n", p.WhitelistID)
+		fmt.Printf("Index: %s\n", idxStr)
 		fmt.Printf("ClockID: %s\n", p.ClockID)
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "create_offer", nil, args, gas, p.GasBudget)
+	txb, err := w.MoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "approve_offer", nil, args, gas, p.GasBudget)
 	if err != nil {
 		return nil, fmt.Errorf("build tx: %w", err)
 	}
@@ -98,8 +86,7 @@ func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.Sui
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("submit_offer aborted: %s", reason)
+		return nil, fmt.Errorf("approve_offer aborted: %s", reason)
 	}
-
 	return resp, nil
 }

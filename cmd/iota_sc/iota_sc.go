@@ -24,6 +24,7 @@ func NewCmd() *cobra.Command {
 		cidCmd(),
 		NewSubmitOfferCmd(),
 		NewApproveOfferCmd(),
+		NewListOpenOfferingWindowsCmd(),
 	)
 	return iota_scCmd
 }

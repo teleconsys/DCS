@@ -200,7 +200,7 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0x688de3789d6f0fa807b9125d6b79f352dc8b991daa3c84c742a4899c7199b842", nil
+	return "0x1f70a54410d1e7e03686429ff5f41d324d6071ffafbfeae7004ca89deffa56c2", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {

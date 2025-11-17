@@ -52,8 +52,6 @@ func NewSubmitOfferCmd() *cobra.Command {
 			signer := firstNonEmpty(
 				flagSigner,
 				os.Getenv("PROVIDER_ADDRESS"),
-				os.Getenv("GC_ADDRESS"), //TODO: only provider?
-				os.Getenv("USER_ADDRESS"),
 			)
 			if signer == "" {
 				return fmt.Errorf("missing signer address (set --signer-address or PROVIDER_ADDRESS / GC_ADDRESS / USER_ADDRESS)")
@@ -61,8 +59,6 @@ func NewSubmitOfferCmd() *cobra.Command {
 			privKey := firstNonEmpty(
 				flagPrivKey,
 				os.Getenv("PROVIDER_PRIVATE_KEY"),
-				os.Getenv("GC_PRIVATE_KEY"),
-				os.Getenv("USER_PRIVATE_KEY"),
 			)
 			if privKey == "" {
 				return fmt.Errorf("missing private key (set --signer-private-key or PROVIDER_PRIVATE_KEY / GC_PRIVATE_KEY / USER_PRIVATE_KEY)")
@@ -70,8 +66,6 @@ func NewSubmitOfferCmd() *cobra.Command {
 			gasID := firstNonEmpty(
 				flagGasID,
 				os.Getenv("PROVIDER_GAS_COIN_ID"),
-				os.Getenv("WALLET_GAS_ID"),
-				os.Getenv("USER_GAS_COIN_ID"),
 			)
 			if gasID == "" {
 				return fmt.Errorf("missing gas coin id (set --gas-id or PROVIDER_GAS_COIN_ID / WALLET_GAS_ID / USER_GAS_COIN_ID)")

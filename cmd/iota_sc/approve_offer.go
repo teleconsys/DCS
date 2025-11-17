@@ -52,27 +52,21 @@ func NewApproveOfferCmd() *cobra.Command {
 			// flags > OWNER_* > USER_* > GC_*
 			signer := firstNonEmpty(
 				flagSigner,
-				os.Getenv("OWNER_ADDRESS"),
 				os.Getenv("USER_ADDRESS"),
-				os.Getenv("GC_ADDRESS"), // TODO: remove GC_ADDRESS?
 			)
 			if signer == "" {
 				return fmt.Errorf("missing signer address (set --signer-address or OWNER_ADDRESS / USER_ADDRESS / GC_ADDRESS)")
 			}
 			privKey := firstNonEmpty(
 				flagPrivKey,
-				os.Getenv("OWNER_PRIVATE_KEY"),
 				os.Getenv("USER_PRIVATE_KEY"),
-				os.Getenv("GC_PRIVATE_KEY"),
 			)
 			if privKey == "" {
 				return fmt.Errorf("missing private key (set --signer-private-key or OWNER_PRIVATE_KEY / USER_PRIVATE_KEY / GC_PRIVATE_KEY)")
 			}
 			gasID := firstNonEmpty(
 				flagGasID,
-				os.Getenv("OWNER_GAS_COIN_ID"),
 				os.Getenv("USER_GAS_COIN_ID"),
-				os.Getenv("WALLET_GAS_ID"),
 			)
 			if gasID == "" {
 				return fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID / WALLET_GAS_ID)")

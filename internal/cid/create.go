@@ -52,7 +52,7 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 		// Defaults: start in +30 minutes, end 20 minutes after start.
 		// (This gives you ~40 minutes from now to submit offers:
 		//  window is open until start + 10 minutes per the Move guard.)
-		const startOffsetMinutes = 30
+		const startOffsetMinutes = 2
 		const windowAfterStartMinutes = 20
 
 		p.EpochStart = now + startOffsetMinutes*60*1000
@@ -200,7 +200,7 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0x1f70a54410d1e7e03686429ff5f41d324d6071ffafbfeae7004ca89deffa56c2", nil
+	return "0x4ea0ca5015936423834dbce6aab35bf1e0e75c4ee75d8e6bffa048099cfcb66f", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {

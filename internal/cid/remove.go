@@ -16,14 +16,14 @@ import (
 )
 
 type RemoveParams struct {
-	CIDId         		string
-	CIDListID     		string
-	PackageID     		string
-	GasID         		string
-	GasBudget     		uint64
-	RPCURL        		string
-	UserSignerAddress 	string
-	UserPrivateKey 		string
+	CIDId             string
+	CIDListID         string
+	PackageID         string
+	GasID             string
+	GasBudget         uint64
+	RPCURL            string
+	UserSignerAddress string
+	UserPrivateKey    string
 }
 
 func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
@@ -73,7 +73,7 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
 	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv		
+		p.UserPrivateKey = userPrivateKeyEnv
 	} else {
 		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
@@ -82,7 +82,7 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
 		p.UserSignerAddress = signerAddress
 	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv		
+		p.UserSignerAddress = userAddressEnv
 	} else {
 		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
 	}
@@ -90,7 +90,7 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
 	p.GasID = os.Getenv("USER_GAS_COIN_ID")
 	if p.GasID == "" {
-		return p, fmt.Errorf("set DCS_CIDCOIN_ID env var or pass --user-coin-id (0x...)")
+		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
 	}
 
 	// Get package ID
@@ -110,7 +110,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	if p.CIDListID == "" {
 		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
 	}
-
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
 		if v, err := strconv.ParseUint(s, 10, 64); err == nil {

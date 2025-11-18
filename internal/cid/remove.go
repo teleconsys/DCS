@@ -16,14 +16,14 @@ import (
 )
 
 type RemoveParams struct {
-	CIDId         		string
-	CIDListID     		string
-	PackageID     		string
-	GasID         		string
-	GasBudget     		uint64
-	RPCURL        		string
-	UserSignerAddress 	string
-	UserPrivateKey 		string
+	CIDId             string
+	CIDListID         string
+	PackageID         string
+	GasID             string
+	GasBudget         uint64
+	RPCURL            string
+	UserSignerAddress string
+	UserPrivateKey    string
 }
 
 func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
@@ -72,17 +72,13 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
-	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv		
-	} else {
-		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address
 	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
 		p.UserSignerAddress = signerAddress
 	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv		
+		p.UserSignerAddress = userAddressEnv
 	} else {
 		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
 	}
@@ -110,7 +106,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	if p.CIDListID == "" {
 		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
 	}
-
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
 		if v, err := strconv.ParseUint(s, 10, 64); err == nil {

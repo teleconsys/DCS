@@ -14,13 +14,13 @@ import (
 )
 
 type TransitionParams struct {
-	RPCURL string
-	GasID string
-	GasBudget uint64
+	RPCURL            string
+	GasID             string
+	GasBudget         uint64
 	UserSignerAddress string
-	UserPrivateKey string
-	PackageID string
-	CIDType string
+	UserPrivateKey    string
+	PackageID         string
+	CIDType           string
 }
 
 func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, error) {
@@ -45,21 +45,16 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or pass --package-id (0x...)")
 	}
 
-
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
-	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv		
-	} else {
-		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address
 	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
 		p.UserSignerAddress = signerAddress
 	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv		
+		p.UserSignerAddress = userAddressEnv
 	} else {
 		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
 	}
@@ -94,7 +89,6 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 	return p, nil
 }
 
-
 func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool, error) {
 
 	CID := cid
@@ -107,11 +101,10 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 		}
 	}
 
-	
 	if err != nil {
 		return false, fmt.Errorf("failed to get CID ID: %w", err)
 	}
-	
+
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return false, fmt.Errorf("rpc dial failed: %w", err)
@@ -153,12 +146,11 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 	}
 	reqType := suitypes.ExecuteTransactionRequestType("WaitForLocalExecution")
 
-    _, err = w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
+	_, err = w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
 		return false, fmt.Errorf("execute: %w", err)
 	}
 
-	
 	return true, nil
 
 }

@@ -56,12 +56,9 @@ func NewSubmitOfferCmd() *cobra.Command {
 			if signer == "" {
 				return fmt.Errorf("missing signer address (set --signer-address or PROVIDER_ADDRESS / GC_ADDRESS / USER_ADDRESS)")
 			}
-			privKey := firstNonEmpty(
-				flagPrivKey,
-				os.Getenv("PROVIDER_PRIVATE_KEY"),
-			)
-			if privKey == "" {
-				return fmt.Errorf("missing private key (set --signer-private-key or PROVIDER_PRIVATE_KEY / GC_PRIVATE_KEY / USER_PRIVATE_KEY)")
+			privKey, err := ResolvePrivateKey(flagPrivKey)
+			if err != nil {
+				return err
 			}
 			gasID := firstNonEmpty(
 				flagGasID,
@@ -123,7 +120,7 @@ func NewSubmitOfferCmd() *cobra.Command {
 
 	// optional overrides
 	cmd.Flags().StringVar(&flagSigner, "signer-address", "", "Signer address (0x...) overrides env")
-	cmd.Flags().StringVar(&flagPrivKey, "signer-private-key", "", "Signer private key (iotaprivkey1...) overrides env")
+	cmd.Flags().StringVar(&flagPrivKey, "signer-private-key", "", "Signer private key (iotaprivkey1...); if omitted you will be promped to insert it")
 	cmd.Flags().StringVar(&flagGasID, "gas-id", "", "Gas coin object id (0x...) overrides env")
 
 	_ = cmd.MarkFlagRequired("cid")

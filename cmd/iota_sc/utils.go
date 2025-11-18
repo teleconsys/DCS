@@ -1,8 +1,11 @@
 package iota_sc
 
 import (
+	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -203,4 +206,77 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// ResolvePrivateKey resolves the private key to use for signing.
+//
+// Precedence:
+//  1. If flagValue is non-empty, it is validated and returned.
+//  2. Otherwise, the user is prompted on stdin to enter the key.
+//
+// The key must be either:
+//   - a bech32 string starting with iotaprivkey1... or suiprivkey1..., or
+//   - a base64-encoded 33-byte [0x00 | 32-byte ed25519 secret] keystore.
+func ResolvePrivateKey(flagValue string) (string, error) {
+	if s := strings.TrimSpace(flagValue); s != "" {
+		if err := validatePrivateKeyFormat(s); err != nil {
+			return "", err
+		}
+		return s, nil
+	}
+
+	// Interactive prompt
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Fprint(os.Stderr,
+		"Enter private key (iotaprivkey1... / suiprivkey1... or base64 keystore): ",
+	)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("reading private key from stdin: %w", err)
+	}
+	key := strings.TrimSpace(line)
+	if err := validatePrivateKeyFormat(key); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+
+// validatePrivateKeyFormat performs format checks against the
+// formats supported by rebased.SignTxBytes.
+func validatePrivateKeyFormat(s string) error {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return errors.New("private key not in accepted format (empty string)")
+	}
+
+	lower := strings.ToLower(s)
+
+	// 1) Bech32 form: iotaprivkey1... / suiprivkey1...
+	if strings.HasPrefix(lower, "iotaprivkey1") || strings.HasPrefix(lower, "suiprivkey1") {
+		// Run through the bech32 decoder from rebased to catch obvious mistakes.
+		if _, err := rebased.Bech32ToKeystoreB64(s); err != nil {
+			return fmt.Errorf(
+				"private key not in accepted format (invalid iotaprivkey1.../suiprivkey1... bech32): %w",
+				err,
+			)
+		}
+		return nil
+	}
+
+	// 2) Base64 form: 33 bytes [0x00 | 32-byte secret]
+	raw, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return fmt.Errorf(
+			"private key not in accepted format (expected iotaprivkey1.../suiprivkey1... or base64 keystore): %w",
+			err,
+		)
+	}
+	if len(raw) != 33 || raw[0] != 0x00 {
+		return fmt.Errorf(
+			"private key not in accepted format (expected base64-encoded [0x00 | 32-byte ed25519 secret], got %d bytes)",
+			len(raw),
+		)
+	}
+
+	return nil
 }

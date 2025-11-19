@@ -222,7 +222,7 @@ func Withdraw(ctx context.Context, p WithdrawParams) (*suitypes.SuiTransactionBl
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.Signer,
 		p.PackageID,

@@ -15,16 +15,16 @@ import (
 )
 
 type HonorOfferParams struct {
-	CIDObjectID string 
-	Index       uint64 
-	ClockID     string 
-	PackageID string
-	GasID     string
-	GasBudget uint64
-	RPCURL    string
-	Signer  string 
-	PrivKey string 
-	Debug bool
+	CIDObjectID string
+	Index       uint64
+	ClockID     string
+	PackageID   string
+	GasID       string
+	GasBudget   uint64
+	RPCURL      string
+	Signer      string
+	PrivKey     string
+	Debug       bool
 }
 
 func firstNonEmpty(vals ...string) string {
@@ -35,7 +35,6 @@ func firstNonEmpty(vals ...string) string {
 	}
 	return ""
 }
-
 
 // LoadHonorParams loads parameters from command flags and environment variables
 func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (HonorOfferParams, error) {
@@ -164,16 +163,16 @@ func HonorOffer(ctx context.Context, p HonorOfferParams) (*suitypes.SuiTransacti
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(
-		ctx, 
+	txb, err := w.UnsafeMoveCallUnsigned(
+		ctx,
 		p.Signer,
-		 p.PackageID, 
-		 "dcs", 
-		 "honor_offer", 
-		 nil, 
-		 args, 
-		 gas, 
-		 p.GasBudget,
+		p.PackageID,
+		"dcs",
+		"honor_offer",
+		nil,
+		args,
+		gas,
+		p.GasBudget,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("build tx: %w", err)

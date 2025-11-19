@@ -105,7 +105,7 @@ func AddToWhitelist(ctx context.Context, p AddParams) (out []byte, already bool,
 	args := []any{p.Member, p.WhitelistID}
 	gasPtr := &p.GasID
 
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.SignerAddress,
 		p.PackageID,

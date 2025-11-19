@@ -119,7 +119,7 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,

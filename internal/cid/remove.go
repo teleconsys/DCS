@@ -148,7 +148,7 @@ func RemoveCID(ctx context.Context, p RemoveParams) ([]byte, error) {
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,

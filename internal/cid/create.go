@@ -154,7 +154,7 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		"0x2", // IOTA framework package ID
@@ -214,7 +214,7 @@ func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, s
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,
@@ -271,7 +271,7 @@ func AddToCIDList(ctx context.Context, p CreateParams, cidId string) ([]byte, er
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,

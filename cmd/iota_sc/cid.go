@@ -12,8 +12,8 @@ import (
 
 func cidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "cid",
-		Short: "CID utilities",
+		Use:          "cid",
+		Short:        "CID utilities",
 		SilenceUsage: true,
 	}
 	cmd.AddCommand(
@@ -26,7 +26,7 @@ func cidCmd() *cobra.Command {
 }
 
 /*
-	Create a CID
+Create a CID
 */
 func createCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -93,13 +93,13 @@ Examples:
 			}
 
 			// Split coin first to get the coin ID for CID creation
-			cmd.Printf("Splitting coin for CID creation...\n")
-			cidCoinId, err := cid_sc.SplitCoinDummy(cmd.Context(), params, params.GasID, 4800000)
+			cmd.Printf("Creating a new gas coin for the CID creation...\n")
+			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, 100000)
 			if err != nil {
-				cmd.PrintErrf("Failed to split coin: %v\n", err)
+				cmd.PrintErrf("Failed to create a new gas coin: %v\n", err)
 				return err
 			}
-			cmd.Printf("✅ Coin split successfully, new coin ID: %s\n", cidCoinId)
+			cmd.Printf("✅ New gas coin created successfully, new coin ID: %s\n", cidCoinId)
 
 			// Create CID object using new wrapper
 			cmd.Printf("Creating CID object...\n")
@@ -133,7 +133,6 @@ Examples:
 	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides USER_PRIVATE_KEY env var)")
 	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite USER_GAS_COIN_ID env var)")
 
-	
 	// Mark required flags
 	cmd.MarkFlagRequired("type")
 	cmd.MarkFlagRequired("epoch-start")
@@ -142,7 +141,7 @@ Examples:
 }
 
 /*
-	Remove a CID
+Remove a CID
 */
 func removeCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -174,13 +173,12 @@ func removeCidCmd() *cobra.Command {
 	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides USER_PRIVATE_KEY env var)")
 	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite USER_GAS_COIN_ID env var)")
 
-
 	cmd.MarkFlagRequired("cid-type")
 	return cmd
 }
 
 /*
-	Check if a CID is listed in the smart contract
+Check if a CID is listed in the smart contract
 */
 func isInListCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -242,7 +240,7 @@ func transitionEpochCmd() *cobra.Command {
 			return nil
 		},
 	}
-	
+
 	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
 	cmd.MarkFlagRequired("cid-type")
 

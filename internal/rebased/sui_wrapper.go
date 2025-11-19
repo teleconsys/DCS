@@ -3,6 +3,7 @@ package rebased
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	suiclient "github.com/coming-chat/go-sui/v2/client"
@@ -145,6 +146,38 @@ func (w *Wrapper) ExecuteTransactionBlock(
 		return nil, err
 	}
 	return &rsp, nil
+}
+
+// ---- pay iota ----------------------------------------------
+
+// Build an unsigned payIota transaction
+func (w *Wrapper) PayIotaUnsigned(
+	ctx context.Context,
+	signerAddress string,
+	inputCoins []string,
+	recipients []string,
+	amounts []string,
+	gasBudget uint64,
+) (*suitypes.TransactionBytes, error) {
+	fmt.Println("Building transaction pay iota...")
+	var txb suitypes.TransactionBytes
+
+	gasBudgetStr := fmt.Sprintf("%d", gasBudget)
+
+	err := w.call(ctx, &txb, "unsafe_payIota",
+		signerAddress, // signer
+		inputCoins,    // input_coins
+		recipients,    // recipients (pay to yourself)
+		amounts,       // amounts
+		gasBudgetStr,  // gas_budget
+	)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building the transaction: %v\n", err)
+		return nil, err
+	}
+
+	return &txb, nil
 }
 
 // Dial opens a JSON-RPC connection to an IOTA Rebased (Sui-compatible) node.

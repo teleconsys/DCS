@@ -1,8 +1,6 @@
 package ipfs
 
 import (
-	"bytes"
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -10,8 +8,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/ipfs/boxo/files"
-	"github.com/ipfs/kubo/client/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -24,14 +20,13 @@ func newLoadFileCmd() *cobra.Command {
 			filePath := args[0]
 			cmd.Printf("Loading %s into IPFS …\n", filePath)
 			
-			// Read the file
-			fileContent, err := os.ReadFile(filePath)
+			// Get file size for display
+			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				cmd.PrintErrf("Failed to read file %s: %v\n", filePath, err)
+				cmd.PrintErrf("Failed to get file info: %v\n", err)
 				return err
 			}
-			
-			cmd.Printf("File size: %d bytes\n", len(fileContent))
+			cmd.Printf("File size: %d bytes\n", fileInfo.Size())
 			
 			// TODO: add symmetric key management
 			// // Generate a random AES256 key
@@ -50,32 +45,15 @@ func newLoadFileCmd() *cobra.Command {
 			
 			// cmd.Printf("Encrypted content size: %d bytes\n", len(encryptedContent))
 			
-			// Connect to local IPFS node
-			api, err := rpc.NewLocalApi()
+			// Load the file into IPFS using the utility function
+			ipfsPath, err := LoadFileToIPFS(filePath)
 			if err != nil {
-				cmd.PrintErrf("Failed to connect to IPFS node: %v\n", err)
+				cmd.PrintErrf("Failed to load file to IPFS: %v\n", err)
 				return err
 			}
 			
-			ctx := context.Background()
-			
-			// Add the encrypted content to IPFS
-			node := files.NewReaderFile(bytes.NewReader(fileContent))
-			ipfsPath, err := api.Unixfs().Add(ctx, node)
-			if err != nil {
-				cmd.PrintErrf("Failed to add file to IPFS: %v\n", err)
-				return err
-			}
-			
-			// Pin the content
-			err = api.Pin().Add(ctx, ipfsPath)
-			if err != nil {
-				cmd.PrintErrf("Failed to pin file: %v\n", err)
-				return err
-			}
-			
-			cmd.Printf("✅ File successfully encrypted and uploaded to IPFS\n")
-			cmd.Printf("📁 IPFS Path: %s\n", ipfsPath.String())
+			cmd.Printf("✅ File successfully uploaded to IPFS\n")
+			cmd.Printf("📁 IPFS Path: %s\n", ipfsPath)
 			// cmd.Printf("🔑 Encryption Key (hex): %x\n", key)
 			// cmd.Printf("⚠️  Store this key securely to decrypt the file later!\n")
 			

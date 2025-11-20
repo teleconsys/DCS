@@ -26,6 +26,11 @@ func NewHonorOfferCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			privKey, err := ResolvePrivateKey(p.PrivKey)
+			if err != nil {
+				return err
+			}
+			p.PrivKey = privKey
 
 			if p.Debug {
 				fmt.Println("== preflight ==")
@@ -68,7 +73,7 @@ func NewHonorOfferCmd() *cobra.Command {
 
 	// optional overrides
 	cmd.Flags().StringVar(&flagSigner, "signer-address", "", "Signer address (0x...) overrides env")
-	cmd.Flags().StringVar(&flagPrivKey, "signer-private-key", "", "Signer private key (iotaprivkey1...) overrides env")
+	cmd.Flags().StringVar(&flagPrivKey, "signer-private-key", "", "Signer private key (iotaprivkey1...) if omitted you will be promped to insert it")
 	cmd.Flags().StringVar(&flagGasID, "gas-id", "", "Gas coin object id (0x...) overrides env")
 
 	_ = cmd.MarkFlagRequired("cid")

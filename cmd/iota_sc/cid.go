@@ -94,6 +94,14 @@ Examples:
 				return err
 			}
 
+			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
+			privKey, err := ResolvePrivateKey(flagPrivKey)
+			if err != nil {
+				cmd.PrintErrf("Invalid private key: %v\n", err)
+				return err
+			}
+			params.UserPrivateKey = privKey
+
 			// Split coin first to get the coin ID for CID creation
 			cmd.Printf("Creating a new gas coin for the CID creation...\n")
 			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, 100000)
@@ -132,7 +140,7 @@ Examples:
 	cmd.Flags().Uint64("epoch-start", 0, "Next epoch start timestamp (required)")
 	cmd.Flags().Uint64("epoch-end", 0, "Next epoch end timestamp (required)")
 	cmd.Flags().String("user-address", "", "Address of the user (overwrite USER_ADDRESS env var)")
-	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides USER_PRIVATE_KEY env var)")
+	cmd.Flags().String("user-private-key", "", "Private key for signin; if omitted you will be promped to insert it")
 	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite USER_GAS_COIN_ID env var)")
 
 	// Mark required flags
@@ -157,6 +165,14 @@ func removeCidCmd() *cobra.Command {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
+
+			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
+			privKey, err := ResolvePrivateKey(flagPrivKey)
+			if err != nil {
+				cmd.PrintErrf("Invalid private key: %v\n", err)
+				return err
+			}
+			params.UserPrivateKey = privKey
 
 			// Remove CID using new wrapper
 			_, err = cid_sc.RemoveCID(cmd.Context(), params)
@@ -230,6 +246,13 @@ func transitionEpochCmd() *cobra.Command {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
+			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
+			privKey, err := ResolvePrivateKey(flagPrivKey)
+			if err != nil {
+				cmd.PrintErrf("Invalid private key: %v\n", err)
+				return err
+			}
+			params.UserPrivateKey = privKey
 
 		_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
 
@@ -295,7 +318,7 @@ func addFundsCidCmd() *cobra.Command {
 	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
 	cmd.Flags().String("coin-id", "", "Coin object ID to deposit (0x...)")
 	cmd.Flags().String("user-address", "", "User signer address (0x...) overrides env")
-	cmd.Flags().String("user-private-key", "", "User private key (iotaprivkey1...) overrides env")
+	cmd.Flags().String("user-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
 	cmd.Flags().String("user-gas-coin-id", "", "Gas coin object id (0x...) overrides env")
 
 	cmd.MarkFlagRequired("cid-type")

@@ -72,10 +72,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
-	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv
-	} else {
-		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address

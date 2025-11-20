@@ -88,18 +88,8 @@ func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (Ho
 		return p, fmt.Errorf("missing signer address (set --signer-address or OWNER_ADDRESS / USER_ADDRESS / GC_ADDRESS)")
 	}
 	p.Signer = signer
-
-	// Get private key: flags > OWNER_* > USER_* > GC_*
 	flagPrivKey, _ := cmd.Flags().GetString("signer-private-key")
-	privKey := firstNonEmpty(
-		flagPrivKey,
-		os.Getenv("USER_PRIVATE_KEY"),
-	)
-	if privKey == "" {
-		return p, fmt.Errorf("missing private key (set --signer-private-key or OWNER_PRIVATE_KEY / USER_PRIVATE_KEY / GC_PRIVATE_KEY)")
-	}
-	p.PrivKey = privKey
-
+	p.PrivKey = strings.TrimSpace(flagPrivKey)
 	// Get gas coin ID: flags > OWNER_* > USER_* > WALLET_*
 	flagGasID, _ := cmd.Flags().GetString("gas-id")
 	gasID := firstNonEmpty(

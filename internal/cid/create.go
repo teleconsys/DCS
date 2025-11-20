@@ -95,10 +95,6 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
-	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv
-	} else {
-		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address
@@ -193,7 +189,7 @@ func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount in
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0x4ea0ca5015936423834dbce6aab35bf1e0e75c4ee75d8e6bffa048099cfcb66f", nil
+	return "0xfaced597f3fad647f331f9215711adbac7fa5cbd462456bf1908e5e7c8743c6a", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {

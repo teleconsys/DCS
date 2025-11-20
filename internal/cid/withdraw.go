@@ -146,12 +146,9 @@ func LoadWithdrawParams(ctx context.Context, cmd *cobra.Command, args []string) 
 
 	// Get private key: flags > OWNER_* > USER_* > GC_*
 	flagPrivKey, _ := cmd.Flags().GetString("signer-private-key")
-	privKey := firstNonEmpty(
-		flagPrivKey,
-		os.Getenv("PROVIDER_PRIVATE_KEY"),
-	)
+	privKey := flagPrivKey
 	if privKey == "" {
-		return p, fmt.Errorf("missing private key (set --signer-private-key or OWNER_PRIVATE_KEY / USER_PRIVATE_KEY / GC_PRIVATE_KEY)")
+		return p, fmt.Errorf("missing private key (set --signer-private-key or you will be prompet for it)")
 	}
 	p.PrivKey = privKey
 

@@ -15,22 +15,26 @@ import (
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
-type RemoveParams struct {
-	CIDId             string
-	CIDListID         string
-	PackageID         string
-	GasID             string
-	GasBudget         uint64
-	RPCURL            string
+type AddFundsParams struct {
+	CIDId            string
+	CoinID           string
+	PackageID        string
+	GasID            string
+	GasBudget        uint64
+	RPCURL           string
 	UserSignerAddress string
-	UserPrivateKey    string
+	UserPrivateKey   string
 }
 
-func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
-	var p RemoveParams
+func LoadAddFundsParams(cmd *cobra.Command, args []string) (AddFundsParams, error) {
+	var p AddFundsParams
 
-	if len(args) == 0 {
-		return p, fmt.Errorf("provide CID ID or CID string as argument")
+	// Get CID from flag or args
+	var cidArg string
+	if len(args) > 0 {
+		cidArg = args[0]
+	} else {
+		return p, fmt.Errorf("provide CID ID or CID string as argument or --cid flag")
 	}
 
 	cidType, err := cmd.Flags().GetString("cid-type")
@@ -45,9 +49,9 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 
 	// Set the cidId based on type
 	if cidType == "id" {
-		p.CIDId = args[0]
+		p.CIDId = cidArg
 	} else {
-		cidStr := args[0]
+		cidStr := cidArg
 
 		// Get RPC URL first (needed for GetCIDIdFromList)
 		p.RPCURL = viper.GetString("rpc")
@@ -69,9 +73,22 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		p.CIDId = cidId
 	}
 
+	// Get coin ID to deposit
+	if coinIDFlag, _ := cmd.Flags().GetString("coin-id"); coinIDFlag != "" {
+		p.CoinID = coinIDFlag
+	} else if coinIDEnv := os.Getenv("COIN_ID"); coinIDEnv != "" {
+		p.CoinID = coinIDEnv
+	} else {
+		return p, fmt.Errorf("set COIN_ID env var or pass --coin-id (0x...)")
+	}
+
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
+	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
+		p.UserPrivateKey = userPrivateKeyEnv
+	} else {
+		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address
@@ -83,10 +100,13 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
 	}
 
-	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
-	p.GasID = os.Getenv("USER_GAS_COIN_ID")
-	if p.GasID == "" {
-		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
+	// Get gas coin ID for user: flag takes priority over env var
+	if gasIDFlag, _ := cmd.Flags().GetString("user-gas-coin-id"); gasIDFlag != "" {
+		p.GasID = gasIDFlag
+	} else if gasIDEnv := os.Getenv("USER_GAS_COIN_ID"); gasIDEnv != "" {
+		p.GasID = gasIDEnv
+	} else {
+		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-gas-coin-id (0x...)")
 	}
 
 	// Get package ID
@@ -96,15 +116,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	}
 	if p.PackageID == "" {
 		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or pass --package-id (0x...)")
-	}
-
-	// Get CID list ID
-	p.CIDListID = viper.GetString("dcs.cidlist_id")
-	if p.CIDListID == "" {
-		p.CIDListID = os.Getenv("DCS_CIDLIST_ID")
-	}
-	if p.CIDListID == "" {
-		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
 	}
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
@@ -133,14 +144,15 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	return p, nil
 }
 
-func RemoveCID(ctx context.Context, p RemoveParams) ([]byte, error) {
+func AddFunds(ctx context.Context, p AddFundsParams) ([]byte, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return nil, fmt.Errorf("rpc dial failed: %w", err)
 	}
 
-	// Build arguments for remove_from_cidlist function
-	args := []any{p.CIDId, p.CIDListID}
+	// Build arguments for deposit_funds function
+	// deposit_funds(&mut CID, coin::Coin<IOTA>, &mut TxContext)
+	args := []any{p.CIDId, p.CoinID}
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
@@ -149,7 +161,7 @@ func RemoveCID(ctx context.Context, p RemoveParams) ([]byte, error) {
 		p.UserSignerAddress,
 		p.PackageID,
 		"dcs",
-		"remove_from_cidlist",
+		"deposit_funds",
 		nil,
 		args,
 		gasPtr,

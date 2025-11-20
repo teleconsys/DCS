@@ -61,7 +61,7 @@ func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.Sui
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "create_offer", nil, args, gas, p.GasBudget)
+	txb, err := w.UnsafeMoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "create_offer", nil, args, gas, p.GasBudget)
 	if err != nil {
 		return nil, fmt.Errorf("build tx: %w", err)
 	}

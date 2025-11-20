@@ -3,10 +3,10 @@ package rebased
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	suiclient "github.com/coming-chat/go-sui/v2/client"
-	"github.com/coming-chat/go-sui/v2/types"
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 )
 
@@ -19,27 +19,12 @@ func New(rpc *suiclient.Client) *Wrapper { return &Wrapper{rpc: rpc} }
 
 // ---- method helpers ----------------------------------------------------------
 
-type iotaMethod string
-
-func (m iotaMethod) String() string { return "iota_" + string(m) }
-
-type suiMethod string
-
-func (m suiMethod) String() string { return "sui_" + string(m) }
-
-// raw (no prefix)
 type rawMethod string
 
 func (m rawMethod) String() string { return string(m) }
 
-// Try iota_* first, then sui_*, then raw (unprefixed).
+// Call the RPC method
 func (w *Wrapper) call(ctx context.Context, out any, name string, params ...any) error {
-	if err := w.rpc.CallContext(ctx, out, iotaMethod(name), params...); err == nil {
-		return nil
-	}
-	if err := w.rpc.CallContext(ctx, out, suiMethod(name), params...); err == nil {
-		return nil
-	}
 	return w.rpc.CallContext(ctx, out, rawMethod(name), params...)
 }
 
@@ -51,7 +36,7 @@ func methodNotFound(err error) bool {
 
 func (w *Wrapper) Ping(ctx context.Context) (uint64, error) {
 	var seqStr string
-	if err := w.call(ctx, &seqStr, "getLatestCheckpointSequenceNumber"); err != nil {
+	if err := w.call(ctx, &seqStr, "iota_getLatestCheckpointSequenceNumber"); err != nil {
 		return 0, err
 	}
 	var seq uint64
@@ -61,7 +46,7 @@ func (w *Wrapper) Ping(ctx context.Context) (uint64, error) {
 
 func (w *Wrapper) ChainIdentifier(ctx context.Context) (string, error) {
 	var id string
-	if err := w.call(ctx, &id, "getChainIdentifier"); err != nil {
+	if err := w.call(ctx, &id, "iota_getChainIdentifier"); err != nil {
 		return "", err
 	}
 	return id, nil
@@ -74,7 +59,7 @@ func (w *Wrapper) GetObject(
 	opts suitypes.SuiObjectDataOptions,
 ) (*suitypes.SuiObjectResponse, error) {
 	var out suitypes.SuiObjectResponse
-	if err := w.call(ctx, &out, "getObject", objectID, &opts); err != nil {
+	if err := w.call(ctx, &out, "iota_getObject", objectID, &opts); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -82,7 +67,6 @@ func (w *Wrapper) GetObject(
 
 // ---- build unsigned move call -----------------------------------------------
 
-// Tries moveCall (iota_/sui_/raw), then unsafe_moveCall (iota_/sui_/raw).
 // Note: gasBudget must be sent as a string for JSON-RPC big-int.
 func (w *Wrapper) MoveCallUnsigned(
 	ctx context.Context,
@@ -94,15 +78,15 @@ func (w *Wrapper) MoveCallUnsigned(
 	args []any,
 	gasObject *string,
 	gasBudget uint64,
-) (*types.TransactionBytes, error) {
-	var txb types.TransactionBytes
+) (*suitypes.TransactionBytes, error) {
+	var txb suitypes.TransactionBytes
 
 	if typeArgs == nil {
 		typeArgs = []string{}
 	}
 	gb := fmt.Sprintf("%d", gasBudget) // BigInt as string
 
-	// 1) moveCall
+	// moveCall
 	if err := w.call(ctx, &txb, "moveCall",
 		signerAddress, packageID, module, function,
 		typeArgs, args, gasObject, gb,
@@ -112,7 +96,29 @@ func (w *Wrapper) MoveCallUnsigned(
 		return nil, err
 	}
 
-	// 2) unsafe_moveCall
+	return nil, fmt.Errorf("MoveCallUnsigned: method moveCall not found on RPC")
+}
+
+// Note: gasBudget must be sent as a string for JSON-RPC big-int.
+func (w *Wrapper) UnsafeMoveCallUnsigned(
+	ctx context.Context,
+	signerAddress string,
+	packageID string,
+	module string,
+	function string,
+	typeArgs []string,
+	args []any,
+	gasObject *string,
+	gasBudget uint64,
+) (*suitypes.TransactionBytes, error) {
+	var txb suitypes.TransactionBytes
+
+	if typeArgs == nil {
+		typeArgs = []string{}
+	}
+	gb := fmt.Sprintf("%d", gasBudget) // BigInt as string
+
+	// unsafe_moveCall
 	if err := w.call(ctx, &txb, "unsafe_moveCall",
 		signerAddress, packageID, module, function,
 		typeArgs, args, gasObject, gb,
@@ -122,7 +128,7 @@ func (w *Wrapper) MoveCallUnsigned(
 		return nil, err
 	}
 
-	return nil, fmt.Errorf("MoveCallUnsigned: method not found on RPC (tried moveCall / unsafe_moveCall)")
+	return nil, fmt.Errorf("UnsafeMoveCallUnsigned: method unsafe_moveCall not found on RPC")
 }
 
 // ---- submit signed tx --------------------------------------------------------
@@ -135,10 +141,42 @@ func (w *Wrapper) ExecuteTransactionBlock(
 	reqType suitypes.ExecuteTransactionRequestType, // e.g., "WaitForLocalExecution"
 ) (*suitypes.SuiTransactionBlockResponse, error) {
 	var rsp suitypes.SuiTransactionBlockResponse
-	if err := w.call(ctx, &rsp, "executeTransactionBlock", txBytesBase64, signatures, opts, reqType); err != nil {
+	if err := w.call(ctx, &rsp, "iota_executeTransactionBlock", txBytesBase64, signatures, opts, reqType); err != nil {
 		return nil, err
 	}
 	return &rsp, nil
+}
+
+// ---- pay iota ----------------------------------------------
+
+// Build an unsigned payIota transaction
+func (w *Wrapper) PayIotaUnsigned(
+	ctx context.Context,
+	signerAddress string,
+	inputCoins []string,
+	recipients []string,
+	amounts []string,
+	gasBudget uint64,
+) (*suitypes.TransactionBytes, error) {
+	fmt.Println("Building transaction pay iota...")
+	var txb suitypes.TransactionBytes
+
+	gasBudgetStr := fmt.Sprintf("%d", gasBudget)
+
+	err := w.call(ctx, &txb, "unsafe_payIota",
+		signerAddress, // signer
+		inputCoins,    // input_coins
+		recipients,    // recipients (pay to yourself)
+		amounts,       // amounts
+		gasBudgetStr,  // gas_budget
+	)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building the transaction: %v\n", err)
+		return nil, err
+	}
+
+	return &txb, nil
 }
 
 // Dial opens a JSON-RPC connection to an IOTA Rebased (Sui-compatible) node.

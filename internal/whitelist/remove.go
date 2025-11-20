@@ -105,7 +105,7 @@ func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPr
 	args := []any{p.Member, p.WhitelistID}
 	gasPtr := &p.GasID
 
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.SignerAddress,
 		p.PackageID,

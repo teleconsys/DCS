@@ -1,6 +1,7 @@
 package iota_sc
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,6 +22,7 @@ func cidCmd() *cobra.Command {
 		removeCidCmd(),
 		isInListCidCmd(),
 		transitionEpochCmd(),
+		addFundsCidCmd(),
 	)
 	return cmd
 }
@@ -101,13 +103,13 @@ Examples:
 			params.UserPrivateKey = privKey
 
 			// Split coin first to get the coin ID for CID creation
-			cmd.Printf("Splitting coin for CID creation...\n")
-			cidCoinId, err := cid_sc.SplitCoinDummy(cmd.Context(), params, params.GasID, 4800000)
+			cmd.Printf("Creating a new gas coin for the CID creation...\n")
+			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, 100000)
 			if err != nil {
-				cmd.PrintErrf("Failed to split coin: %v\n", err)
+				cmd.PrintErrf("Failed to create a new gas coin: %v\n", err)
 				return err
 			}
-			cmd.Printf("✅ Coin split successfully, new coin ID: %s\n", cidCoinId)
+			cmd.Printf("✅ New gas coin created successfully, new coin ID: %s\n", cidCoinId)
 
 			// Create CID object using new wrapper
 			cmd.Printf("Creating CID object...\n")
@@ -252,20 +254,75 @@ func transitionEpochCmd() *cobra.Command {
 			}
 			params.UserPrivateKey = privKey
 
-			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
+		_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
 
+		if err != nil {
+			cmd.PrintErrf("Failed to transition epoch: %v\n", err)
+			return err
+		}
+
+		fmt.Printf("Epoch transition successful\n")
+		return nil
+	},
+}
+
+cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
+cmd.MarkFlagRequired("cid-type")
+
+return cmd
+}
+
+/*
+Add funds to a CID
+*/
+func addFundsCidCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "add-funds --cid-type <objectId|cid> [objectId|cid]",
+		Aliases: []string{"add_funds"},
+		Short:   "Deposit IOTA coins into a CID",
+		Args:    cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Load parameters using the new wrapper
+			params, err := cid_sc.LoadAddFundsParams(cmd, args)
 			if err != nil {
-				cmd.PrintErrf("Failed to transition epoch: %v\n", err)
+				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
 
-			fmt.Printf("Epoch transition successful\n")
+			// Add funds using new wrapper
+			respBytes, err := cid_sc.AddFunds(cmd.Context(), params)
+			if err != nil {
+				cmd.PrintErrf("Failed to add funds: %v\n", err)
+				return err
+			}
+
+			// Parse response to get digest
+			var resp map[string]interface{}
+			if err := json.Unmarshal(respBytes, &resp); err == nil {
+				if digest, ok := resp["digest"].(string); ok {
+					cmd.Println("✅ funds deposited")
+					cmd.Printf("digest: %s\n", digest)
+				} else {
+					cmd.Println("✅ funds deposited")
+					cmd.Printf("response: %s\n", string(respBytes))
+				}
+			} else {
+				cmd.Println("✅ funds deposited")
+				cmd.Printf("response: %s\n", string(respBytes))
+			}
+
 			return nil
 		},
 	}
 
-	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
+	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
+	cmd.Flags().String("coin-id", "", "Coin object ID to deposit (0x...)")
+	cmd.Flags().String("user-address", "", "User signer address (0x...) overrides env")
+	cmd.Flags().String("user-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
+	cmd.Flags().String("user-gas-coin-id", "", "Gas coin object id (0x...) overrides env")
+
 	cmd.MarkFlagRequired("cid-type")
+	cmd.MarkFlagRequired("coin-id")
 
 	return cmd
 }

@@ -62,7 +62,7 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
 	p.GasID = os.Getenv("USER_GAS_COIN_ID")
 	if p.GasID == "" {
-		return p, fmt.Errorf("set DCS_CIDCOIN_ID env var or pass --user-coin-id (0x...)")
+		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
 	}
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
@@ -115,7 +115,7 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,

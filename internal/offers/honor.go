@@ -153,7 +153,7 @@ func HonorOffer(ctx context.Context, p HonorOfferParams) (*suitypes.SuiTransacti
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.Signer,
 		p.PackageID,

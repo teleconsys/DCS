@@ -27,7 +27,7 @@ func NewCmd() *cobra.Command {
 		NewHonorOfferCmd(),
 		NewListOpenOfferingWindowsCmd(),
 		NewWithdrawCmd(),
-		//NewAddFundsCmd(),
+		// NewAddFundsCmd(),
 	)
 	return iota_scCmd
 }

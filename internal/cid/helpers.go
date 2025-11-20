@@ -75,6 +75,37 @@ func GetCIDList(ctx context.Context, rpcURL string) ([]string, error) {
 	return result, nil
 }
 
+// GetCIDFields fetches a CID object and returns its fields map using RPC wrapper
+func GetCIDFields(ctx context.Context, w *rebased.Wrapper, cidObjectID string) (map[string]any, error) {
+	// Get the CID object from the blockchain
+	obj, err := w.GetObject(ctx, cidObjectID, suitypes.SuiObjectDataOptions{ShowContent: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CID object %s: %w", cidObjectID, err)
+	}
+	if obj == nil || obj.Data == nil {
+		return nil, fmt.Errorf("CID object %s not found", cidObjectID)
+	}
+	if obj.Error != nil {
+		return nil, fmt.Errorf("rpc getObject error: %+v", obj.Error)
+	}
+	if obj.Data.Content == nil {
+		return nil, fmt.Errorf("CID object %s has no content", cidObjectID)
+	}
+
+	// Parse the CID object JSON
+	cb, err := json.Marshal(obj.Data.Content)
+	if err != nil {
+		return nil, fmt.Errorf("marshal content: %w", err)
+	}
+
+	fields, _, ok := extractFieldsFromContent(cb)
+	if !ok {
+		return nil, fmt.Errorf("could not extract fields from CID object content")
+	}
+
+	return fields, nil
+}
+
 // GetCIDObject fetches a CID object and returns only the cid_str using RPC wrapper
 func GetCIDObject(ctx context.Context, cidObjectID, rpcURL string) (string, error) {
 	// Dial RPC
@@ -83,30 +114,9 @@ func GetCIDObject(ctx context.Context, cidObjectID, rpcURL string) (string, erro
 		return "", fmt.Errorf("rpc dial failed: %w", err)
 	}
 
-	// Get the CID object from the blockchain
-	obj, err := w.GetObject(ctx, cidObjectID, suitypes.SuiObjectDataOptions{ShowContent: true})
+	fields, err := GetCIDFields(ctx, w, cidObjectID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get CID object %s: %w", cidObjectID, err)
-	}
-	if obj == nil || obj.Data == nil {
-		return "", fmt.Errorf("CID object %s not found", cidObjectID)
-	}
-	if obj.Error != nil {
-		return "", fmt.Errorf("rpc getObject error: %+v", obj.Error)
-	}
-	if obj.Data.Content == nil {
-		return "", fmt.Errorf("CID object %s has no content", cidObjectID)
-	}
-
-	// Parse the CID object JSON
-	cb, err := json.Marshal(obj.Data.Content)
-	if err != nil {
-		return "", fmt.Errorf("marshal content: %w", err)
-	}
-
-	fields, _, ok := extractFieldsFromContent(cb)
-	if !ok {
-		return "", fmt.Errorf("could not extract fields from CID object content")
+		return "", err
 	}
 
 	cidStr, ok := fields["cid_str"]

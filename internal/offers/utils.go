@@ -117,3 +117,27 @@ func max0(x int64) int64 {
 	}
 	return x
 }
+
+func toInt64(v any) int64 {
+	switch t := v.(type) {
+	case nil:
+		return 0
+	case float64:
+		return int64(t)
+	case string:
+		i, _ := strconv.ParseInt(t, 10, 64)
+		return i
+	default:
+		return 0
+	}
+}
+
+func asSlice(v any) []any {
+	if v == nil {
+		return nil
+	}
+	if s, ok := v.([]any); ok {
+		return s
+	}
+	return nil
+}

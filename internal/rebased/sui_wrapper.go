@@ -25,7 +25,6 @@ func (m rawMethod) String() string { return string(m) }
 
 // Call the RPC method
 func (w *Wrapper) call(ctx context.Context, out any, name string, params ...any) error {
-	fmt.Println("name: ", name)
 	return w.rpc.CallContext(ctx, out, rawMethod(name), params...)
 }
 

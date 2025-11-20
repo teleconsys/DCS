@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/btcsuite/btcutil/bech32"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/blake2b"
 )
@@ -44,6 +45,11 @@ func newAccountCmd() *cobra.Command {
 				return fmt.Errorf("generate key: %w", err)
 			}
 
+			// Convert private key to bech32 iotaprivkey1... format
+			iotapriv, err := ed25519PrivToIotaPrivKey(priv)
+			if err != nil {
+				return fmt.Errorf("encode private key: %w", err)
+			}
 			// 2) Derive address: 0x + sha3-256(pub).
 			addr := deriveAddress(pub)
 
@@ -66,13 +72,14 @@ func newAccountCmd() *cobra.Command {
 				Alias      string `json:"alias"`
 				Address    string `json:"address"`
 				PublicKey  string `json:"public_key"`  // hex
-				PrivateKey string `json:"private_key"` // hex (keep secret)
+				PrivateKey string `json:"private_key"` // iotaprivkey1...
 			}{
 				Alias:      alias,
 				Address:    addr,
 				PublicKey:  hex.EncodeToString(pub),
-				PrivateKey: hex.EncodeToString(priv),
+				PrivateKey: iotapriv,
 			}
+
 			b, _ := json.MarshalIndent(payload, "", "  ")
 			if err := os.WriteFile(outPath, b, 0o600); err != nil {
 				return fmt.Errorf("write %s: %w", outPath, err)
@@ -80,10 +87,12 @@ func newAccountCmd() *cobra.Command {
 
 			// 4) Print essentials.
 			cmd.Println("account created")
-			cmd.Printf("alias:   %s\n", alias)
-			cmd.Printf("address: %s\n", addr)
-			cmd.Printf("privkey: %s\n", hex.EncodeToString(priv))
-			cmd.Printf("saved:   %s\n", outPath)
+			cmd.Printf("alias:       %s\n", payload.Alias)
+			cmd.Printf("address:     %s\n", payload.Address)
+			cmd.Printf("public key:  %s\n", payload.PublicKey)
+			cmd.Printf("private key: %s\n", payload.PrivateKey)
+			cmd.Println("NOTE: keep the private key secret; anyone with it can control this account.")
+			cmd.Printf("saved file:  %s\n", outPath)
 
 			// 5) Optional faucet funding via .env variable FAUCET_URL.
 			if noFaucet {
@@ -143,4 +152,28 @@ func faucetRequest(base, addr string, amt uint64) error {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, msg)
 	}
 	return nil
+}
+
+// ed25519PrivToIotaPrivKey encodes an ed25519 private key into the
+// iotaprivkey1... bech32 format used by IOTA Rebased / Sui keystores.
+//
+// Layout: bech32(hrp="iotaprivkey", convertBits( [0x00 | seed32], 8->5, pad=true ))
+func ed25519PrivToIotaPrivKey(priv ed25519.PrivateKey) (string, error) {
+	// ed25519.PrivateKey.Seed() returns the 32-byte private seed.
+	seed := priv.Seed()
+	if len(seed) != ed25519.SeedSize {
+		return "", fmt.Errorf("unexpected ed25519 seed length: %d", len(seed))
+	}
+
+	// 0x00 is the Ed25519 scheme flag (same as used by Sui / IOTA keystore).
+	raw := append([]byte{0x00}, seed...)
+
+	// 8-bit -> 5-bit groups, with padding.
+	fiveBit, err := bech32.ConvertBits(raw, 8, 5, true)
+	if err != nil {
+		return "", fmt.Errorf("bech32 8->5 convert: %w", err)
+	}
+
+	// HRP is iotaprivkey for IOTA Rebased.
+	return bech32.Encode("iotaprivkey", fiveBit)
 }

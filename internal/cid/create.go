@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
@@ -52,7 +53,7 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 		// Defaults: start in +30 minutes, end 20 minutes after start.
 		// (This gives you ~40 minutes from now to submit offers:
 		//  window is open until start + 10 minutes per the Move guard.)
-		const startOffsetMinutes = 30
+		const startOffsetMinutes = 2
 		const windowAfterStartMinutes = 20
 
 		p.EpochStart = now + startOffsetMinutes*60*1000
@@ -94,10 +95,6 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	// Get private key: flag takes priority over env var
 	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
 		p.UserPrivateKey = privateKeyFlag
-	} else if userPrivateKeyEnv := os.Getenv("USER_PRIVATE_KEY"); userPrivateKeyEnv != "" {
-		p.UserPrivateKey = userPrivateKeyEnv
-	} else {
-		return p, fmt.Errorf("set USER_PRIVATE_KEY env var or pass --user-private-key")
 	}
 
 	// Get user signer address
@@ -112,7 +109,7 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
 	p.GasID = os.Getenv("USER_GAS_COIN_ID")
 	if p.GasID == "" {
-		return p, fmt.Errorf("set DCS_CIDCOIN_ID env var or pass --user-coin-id (0x...)")
+		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
 	}
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
@@ -139,34 +136,25 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	return p, nil
 }
 
-// splitCoin splits a coin into multiple coins with specified amounts
-func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
+// CreateGasCoin creates a new gas coin for the CID creation with payIota function
+func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
-		return "", fmt.Errorf("rpc dial failed: %w", err)
+		return "", fmt.Errorf("error RPC dial failed: %w", err)
 	}
 
-	// Build arguments for split_coin function
-	// The IOTA framework split_coin function typically takes:
-	// - coin_id: the ID of the coin to split
-	// - amounts: vector of amounts to split into
-	args := []any{coinID, fmt.Sprintf("%d", amount)}
-	gasPtr := &p.GasID
-
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
-		ctx,
-		p.UserSignerAddress,
-		"0x2", // IOTA framework package ID
-		"iota",
-		"split-coin",
-		nil,
-		args,
-		gasPtr,
-		p.GasBudget,
+	fmt.Println("Building transaction pay iota to create a new gas coin...")
+	txb, err := w.PayIotaUnsigned(ctx,
+		p.UserSignerAddress,                 // signer
+		[]string{p.GasID},                   // input_coins
+		[]string{p.UserSignerAddress},       // recipients (pay to yourself)
+		[]string{fmt.Sprintf("%d", amount)}, // amounts
+		p.GasBudget,                         // gas_budget
 	)
+
 	if err != nil {
-		return "", fmt.Errorf("build move call: %w", err)
+		return "", fmt.Errorf("error building the transaction: %w", err)
 	}
 
 	// Sign transaction
@@ -174,10 +162,11 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 	base64Tx := base64.StdEncoding.EncodeToString(rawTx)
 	sigB64, err := rebased.SignTxBytes(ctx, rawTx, p.UserPrivateKey)
 	if err != nil {
-		return "", fmt.Errorf("sign tx: %w", err)
+		return "", fmt.Errorf("error signing the transaction: %w", err)
 	}
 
 	// Execute transaction
+	fmt.Println("Executing the transaction pay iota to create a new gas coin...")
 	opts := &suitypes.SuiTransactionBlockResponseOptions{
 		ShowEffects:       true,
 		ShowEvents:        true,
@@ -187,20 +176,20 @@ func SplitCoin(ctx context.Context, p CreateParams, coinID string, amount int64)
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return "", fmt.Errorf("execute: %w", err)
+		return "", fmt.Errorf("error executing the transaction: %w", err)
 	}
 
-	// Extract new coin ID from response
+	// Extract the new Coin ID from the response
 	newCoinID, err := extractNewCoinIdFromResponse(rsp)
 	if err != nil {
-		return "", fmt.Errorf("extract new coin ID: %w", err)
+		return "", fmt.Errorf("error extracting the new gas coin ID: %w", err)
 	}
 
 	return newCoinID, nil
 }
 
 func SplitCoinDummy(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
-	return "0x688de3789d6f0fa807b9125d6b79f352dc8b991daa3c84c742a4899c7199b842", nil
+	return "0xfaced597f3fad647f331f9215711adbac7fa5cbd462456bf1908e5e7c8743c6a", nil
 }
 
 func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, string, error) {
@@ -214,7 +203,7 @@ func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, s
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,
@@ -271,7 +260,7 @@ func AddToCIDList(ctx context.Context, p CreateParams, cidId string) ([]byte, er
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
-	txb, err := w.MoveCallUnsigned(
+	txb, err := w.UnsafeMoveCallUnsigned(
 		ctx,
 		p.UserSignerAddress,
 		p.PackageID,
@@ -312,21 +301,48 @@ func AddToCIDList(ctx context.Context, p CreateParams, cidId string) ([]byte, er
 	return b, nil
 }
 
-// extractNewCoinIdFromResponse extracts the new coin ID from split transaction response
+// extractNewCoinIdFromResponse extracts the new coin ID from payIota transaction response
 func extractNewCoinIdFromResponse(rsp *suitypes.SuiTransactionBlockResponse) (string, error) {
 	if len(rsp.ObjectChanges) == 0 {
 		return "", fmt.Errorf("no object changes found in transaction response")
 	}
 
-	// Marshal to JSON and extract created coin object IDs
+	// Search in the ObjectChanges array for objects "created" with type Coin
+	for _, change := range rsp.ObjectChanges {
+		// Marshal to access the fields
+		changeJSON, err := json.Marshal(change)
+		if err != nil {
+			continue
+		}
+
+		var changeMap map[string]interface{}
+		if err := json.Unmarshal(changeJSON, &changeMap); err != nil {
+			continue
+		}
+
+		// Search for the "Data": {"created": {...}} structure
+		if data, ok := changeMap["Data"].(map[string]interface{}); ok {
+			if created, ok := data["created"].(map[string]interface{}); ok {
+				// Verify that it is a Coin
+				if objectType, ok := created["objectType"].(string); ok {
+					if strings.Contains(objectType, "Coin") {
+						if objectId, ok := created["objectId"].(string); ok {
+							return objectId, nil
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: search with regex in the marshaled JSON
 	b, err := json.Marshal(rsp.ObjectChanges)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal object changes: %w", err)
 	}
 
-	// Look for created coin objects in the JSON
-	// Pattern matches: "type":"created" followed by "objectType":"...Coin..." and "objectId":"0x..."
-	re := regexp.MustCompile(`"type"\s*:\s*"created"[^}]*"objectType"\s*:\s*"[^"]*Coin[^"]*"[^}]*"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
+	// Pattern to search for "created" with objectId
+	re := regexp.MustCompile(`"created"\s*:\s*\{[^}]*"objectType"\s*:\s*"[^"]*Coin[^"]*"[^}]*"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
 	matches := re.FindStringSubmatch(string(b))
 	if len(matches) > 1 {
 		return matches[1], nil

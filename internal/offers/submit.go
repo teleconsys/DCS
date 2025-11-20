@@ -3,7 +3,6 @@ package offers
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -43,7 +42,7 @@ func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.Sui
 		return nil, fmt.Errorf("rpc dial: %w", err)
 	}
 
-	// IMPORTANT: u64 must be sent as a decimal string for this RPC
+	// u64 must be sent as a decimal string for this RPC
 	amountStr := strconv.FormatUint(p.Amount, 10)
 
 	args := []any{
@@ -62,7 +61,7 @@ func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.Sui
 	}
 
 	gas := &p.GasID
-	txb, err := w.MoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "create_offer", nil, args, gas, p.GasBudget)
+	txb, err := w.UnsafeMoveCallUnsigned(ctx, p.Signer, p.PackageID, "dcs", "create_offer", nil, args, gas, p.GasBudget)
 	if err != nil {
 		return nil, fmt.Errorf("build tx: %w", err)
 	}
@@ -103,45 +102,4 @@ func SubmitReplicaOffer(ctx context.Context, p SubmitOfferParams) (*suitypes.Sui
 	}
 
 	return resp, nil
-}
-
-// txStatusOK extracts effects.status from either:
-// 1) TagJson wrapper: { "data": { "status": { "status":"success|failure","error":"..." } } }
-// 2) Direct effects object: { "status": { ... } }
-func txStatusOK(resp *suitypes.SuiTransactionBlockResponse) (bool, string) {
-	if resp == nil || resp.Effects == nil {
-		return false, "no effects in response"
-	}
-	b, _ := json.Marshal(resp.Effects)
-
-	// Shape 1: TagJson wrapper
-	var w1 struct {
-		Data struct {
-			Status struct {
-				Status string `json:"status"`
-				Error  string `json:"error"`
-			} `json:"status"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(b, &w1); err == nil && w1.Data.Status.Status != "" {
-		return w1.Data.Status.Status == "success", w1.Data.Status.Error
-	}
-
-	// Shape 2: direct effects object
-	var w2 struct {
-		Status struct {
-			Status string `json:"status"`
-			Error  string `json:"error"`
-		} `json:"status"`
-	}
-	if err := json.Unmarshal(b, &w2); err == nil && w2.Status.Status != "" {
-		return w2.Status.Status == "success", w2.Status.Error
-	}
-
-	return true, ""
-}
-
-func PrettyJSON(v any) string {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	return string(b)
 }

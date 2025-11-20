@@ -8,6 +8,7 @@ require (
 	github.com/ipfs/boxo v0.33.0
 	github.com/ipfs/kubo v0.36.0
 	github.com/joho/godotenv v1.5.1
+	github.com/machinebox/graphql v0.2.2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	golang.org/x/crypto v0.39.0
@@ -93,6 +94,7 @@ require (
 	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/libp2p/go-netroute v0.2.2 // indirect
 	github.com/libp2p/go-reuseport v0.4.0 // indirect
+	github.com/matryer/is v1.4.1 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mholt/acmez/v3 v3.0.0 // indirect
 	github.com/miekg/dns v1.1.66 // indirect

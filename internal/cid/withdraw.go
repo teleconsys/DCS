@@ -159,7 +159,7 @@ func LoadWithdrawParams(ctx context.Context, cmd *cobra.Command, args []string) 
 		os.Getenv("PROVIDER_GAS_COIN_ID"),
 	)
 	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID / WALLET_GAS_ID)")
+		return p, fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID)")
 	}
 	p.GasID = gasID
 

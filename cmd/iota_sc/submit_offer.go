@@ -65,7 +65,7 @@ func NewSubmitOfferCmd() *cobra.Command {
 				os.Getenv("PROVIDER_GAS_COIN_ID"),
 			)
 			if gasID == "" {
-				return fmt.Errorf("missing gas coin id (set --gas-id or PROVIDER_GAS_COIN_ID / WALLET_GAS_ID / USER_GAS_COIN_ID)")
+				return fmt.Errorf("missing gas coin id (set --gas-id or PROVIDER_GAS_COIN_ID / USER_GAS_COIN_ID)")
 			}
 
 			p := offers.SubmitOfferParams{

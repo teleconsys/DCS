@@ -97,10 +97,12 @@ func newWhitelistAddCmd() *cobra.Command {
 				cmd.Println("Address is already in the whitelist.")
 				return nil
 			}
-			cmd.Print(string(out))
+			// cmd.Print(string(out))
 			if err != nil {
 				return fmt.Errorf("iota client call failed: %w", err)
 			}
+			cmd.Printf("Address %s successfully added to the whitelist.\n", p.Member)
+			_ = out // out is kept for potential future use but not printed
 			return nil
 		},
 	}
@@ -134,10 +136,12 @@ func newWhitelistRemoveCmd() *cobra.Command {
 				cmd.Println("Address is not in the whitelist.")
 				return nil
 			}
-			cmd.Print(string(out))
+			// cmd.Print(string(out))
 			if err != nil {
 				return fmt.Errorf("iota client call failed: %w", err)
 			}
+			cmd.Printf("Address %s successfully removed from the whitelist.\n", p.Member)
+			_ = out // out is kept for potential future use but not printed
 			return nil
 		},
 	}

@@ -34,6 +34,12 @@ func methodNotFound(err error) bool {
 
 // ---- basic reads -------------------------------------------------------------
 
+// Checkpoint represents a checkpoint with its sequence number and timestamp.
+type Checkpoint struct {
+	SequenceNumber string `json:"sequenceNumber"`
+	TimestampMs    string `json:"timestampMs"`
+}
+
 func (w *Wrapper) Ping(ctx context.Context) (uint64, error) {
 	var seqStr string
 	if err := w.call(ctx, &seqStr, "iota_getLatestCheckpointSequenceNumber"); err != nil {
@@ -42,6 +48,16 @@ func (w *Wrapper) Ping(ctx context.Context) (uint64, error) {
 	var seq uint64
 	_, err := fmt.Sscan(seqStr, &seq)
 	return seq, err
+}
+
+// GetCheckpoint returns the checkpoint details for the given sequence number.
+func (w *Wrapper) GetCheckpoint(ctx context.Context, sequenceNumber uint64) (*Checkpoint, error) {
+	var cp Checkpoint
+	seqStr := fmt.Sprintf("%d", sequenceNumber)
+	if err := w.call(ctx, &cp, "iota_getCheckpoint", seqStr); err != nil {
+		return nil, err
+	}
+	return &cp, nil
 }
 
 func (w *Wrapper) ChainIdentifier(ctx context.Context) (string, error) {

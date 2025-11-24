@@ -12,7 +12,7 @@ The DCS system involves three main actors, each with distinct roles and responsi
 
 Admin actor responsible for system-wide management. GC can:
 
-- Add or remove providers from the whitelist
+- Add or remove users and providers from the whitelist
 
 **Environment Variables:**
 
@@ -105,7 +105,7 @@ go run main.go iota_sc whitelist has [ADDRESS] [--member <address>] [--print-add
 
 **Description:**
 
-- Return true if ADDRESS/ID is in the whitelist (RPC)
+- Return true if the given ADDRESS is in the whitelist (RPC)
 - **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
 
 **Options:**
@@ -127,7 +127,7 @@ go run main.go iota_sc whitelist add [ADDRESS] [--member <address>] [--package-i
 
 **Description:**
 
-- Add ADDRESS/ID to the whitelist (requires signer)
+- Add a user/provider ADDRESS to the whitelist (requires signer)
 - **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
 
 **Options:**
@@ -147,7 +147,7 @@ go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--packag
 
 **Description:**
 
-- Remove ADDRESS/ID from the whitelist (requires signer)
+- Remove the given ADDRESS from the whitelist (requires signer)
 - **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
 
 **Options:**
@@ -171,13 +171,14 @@ go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timesta
 
 - Create a new CID object in the smart contract
 - Can provide a CID directly or upload a file to IPFS
+- Automatically create a gas coin object and assign it to the created CID object
 
 **Options:**
 
 - `--type <path|cid>`: Type of input - 'path' to upload file, 'cid' for existing CID (required)
 - `[CID]`: CID string (if --type is 'cid') or file path (if --type is 'path')
-- `--epoch-start <timestamp>`: Next epoch start timestamp (required)
-- `--epoch-end <timestamp>`: Next epoch end timestamp (required)
+- `--epoch-start <timestamp>`: Next epoch start timestamp (required, 0 for default duration)
+- `--epoch-end <timestamp>`: Next epoch end timestamp (required, 0 for default duration)
 - `--user-private-key <key>`: Private key for signing(overrides USER_PRIVATE_KEY env var); if omitted you will be prompted to insert it <!-- TODO if omitted read from USER_PRIVATE_KEY -->
 - `--user-address <address>`: Address of the user (overwrites USER_ADDRESS env var)
 - `--user-coin-id <coin-id>`: Coin ID of the user (overwrites USER_GAS_COIN_ID env var)
@@ -415,21 +416,127 @@ iota client gas
 iota client gas 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b
 ```
 
-<!-- TODO add the following -->
+### 4.3. Faucet
+
+```bash
+iota client faucet --address <address>
+```
+
+**Description:**
+
+- Request test tokens from the IOTA testnet faucet
+- Useful for obtaining initial funds for new accounts
+- Funds an address with test IOTA tokens for development and testing purposes
+
+**Options:**
+
+- `--address <address>`: Address to fund (0x...)
+
+**Example:**
+
+```bash
 iota client faucet --address 0x731f57d2f3c5b102e5a4d182c8d4b6c06f0ba3aaf5534e1913e99631163d3edd
+```
 
+### 4.4. Import Key
+
+```bash
+iota keytool import <private-key> ed25519 --alias <name>
+```
+
+**Description:**
+
+- Import a private key into the IOTA client keychain
+- Creates a named alias for the imported key
+- Allows using the key with the `--alias` flag in subsequent commands
+
+**Options:**
+
+- `<private-key>`: Private key to import (iotaprivkey1...)
+- `ed25519`: Key type (ed25519)
+- `--alias <name>`: Alias name for the imported key
+
+**Example:**
+
+```bash
 iota keytool import iotaprivkey1qp5n5ermut5gvfnvcdp5yhdk50jkdurqydyu7pz3e5qysdvpe6xtqka84au ed25519 --alias dcs_cid_owner
+```
 
+### 4.5. Switch Address
+
+```bash
+iota client switch --address <address>
+```
+
+**Description:**
+
+- Switch the default signer address for the IOTA client
+- Sets the active address that will be used for transactions when no address is explicitly specified
+- Useful for managing multiple accounts
+
+**Options:**
+
+- `--address <address>`: Address to set as default (0x...)
+
+**Example:**
+
+```bash
 iota client switch --address 0x731f57d2f3c5b102e5a4d182c8d4b6c06f0ba3aaf5534e1913e99631163d3edd
+```
 
+### 4.6. List Addresses
+
+```bash
 iota client addresses
+```
+
+**Description:**
+
+- List all addresses associated with the current IOTA client configuration
+- Shows addresses that have been imported or created
+- Useful for verifying available accounts
+
+**Example:**
+
+```bash
+iota client addresses
+```
+
+### 4.7. Create Gas Coin Object
+
+```bash
+iota client pay-iota --input-coins <coin-id> --amounts <amount> --recipients <address>
+```
+
+**Description:**
+
+- Transfer IOTA tokens and create a new gas coin object
+- Splits an existing coin into a new gas coin object with a new ID
+- The new gas coin object ID is automatically generated (cannot be specified)
+- Useful for creating gas coins for transactions
+
+**Options:**
+
+- `--input-coins <coin-id>`: Input coin object ID to spend from (0x...)
+- `--amounts <amount>`: Amount to send (in nanos)
+- `--recipients <address>`: Recipient address (0x...)
+
+**Example:**
+
+```bash
+iota client pay-iota --input-coins 0x55ed45ebd47a7c315856871b190e35b1457852862fa42aeb002faf37e1bea90a --amounts 16000 --recipients 0xea8180205d4c42f165083d2a42da34b329ac866f8c0eccb9b458bb6a41009296
+```
+
+**Notes:**
+
+- Creates a new gas coin object with a new ID (the ID cannot be specified)
 
 ## 5. Main Test Scenario
 
-This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID `0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b`. Furthermore, epoch duration has been adjusted as following to ease the tests:
+This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
 
 - during the first 10 minutes of each epoch, an offer can be submitted by the user
-- after an offer has been approved, the user should honor it during the succeeding epoch (10 minutes before the epoch transition could be performed)
+- after an offer has been approved, the user should honor it during the succeeding epoch (waiting 10 minutes before the epoch transition could be performed)
 
 ### 1. Create CID (user)
 
@@ -455,7 +562,7 @@ go run main.go iota_sc list-open-offers
 
 **Notes:**
 
-- Shows active offers and the time remaining to approve them
+- Shows active offers and the time after which they can be approved
 
 ### 4. Approve Offer (user)
 

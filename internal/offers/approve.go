@@ -99,8 +99,6 @@ func ApproveOffer(ctx context.Context, p ApproveOfferParams) (*suitypes.SuiTrans
 	return resp, nil
 }
 
- 
-
 func isInBudget(ctx context.Context, w *rebased.Wrapper, cidId string, offerIndex uint64) (bool, error) {
 	fields, err := cid.GetCIDFields(ctx, w, cidId)
 	if err != nil {
@@ -116,7 +114,7 @@ func isInBudget(ctx context.Context, w *rebased.Wrapper, cidId string, offerInde
 	if !ok {
 		return false, fmt.Errorf("funds is not a map")
 	}
-	
+
 	// Access balance through fields sub-object
 	fieldsObj, ok := funds["fields"].(map[string]any)
 	if !ok {
@@ -144,7 +142,7 @@ func isInBudget(ctx context.Context, w *rebased.Wrapper, cidId string, offerInde
 	if !ok {
 		return false, fmt.Errorf("offer at index %d is not a map", offerIndex)
 	}
-	
+
 	// Access amount through fields sub-object
 	offerFields, ok := offer["fields"].(map[string]any)
 	if !ok {
@@ -162,19 +160,19 @@ func isInBudget(ctx context.Context, w *rebased.Wrapper, cidId string, offerInde
 		if !ok {
 			continue
 		}
-		
+
 		// Access fields sub-object
 		oFields, ok := o["fields"].(map[string]any)
 		if !ok {
 			continue
 		}
-		
+
 		// Check if approved is true
 		approved, ok := oFields["approved"].(bool)
 		if !ok || !approved {
 			continue
 		}
-		
+
 		// Get amount and add to total
 		amount := toInt64(oFields["amount"])
 		if amount < 0 {
@@ -183,8 +181,8 @@ func isInBudget(ctx context.Context, w *rebased.Wrapper, cidId string, offerInde
 		total += uint64(amount)
 	}
 
-	fmt.Printf("total approved offers: %d\n, CID balance: %d\n, offer amount: %d\n", total, balance, offerAmount)
-	
+	fmt.Printf("total approved offers: %d\n- CID balance: %d\n- offer amount: %d\n", total, balance, offerAmount)
+
 	// Check if funds.balance - total >= offer
 	available := uint64(balance) - total
 	return available >= uint64(offerAmount), nil

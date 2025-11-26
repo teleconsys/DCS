@@ -8,7 +8,7 @@ This document provides a comprehensive checklist of CLI commands and their avail
 
 The DCS system involves three main actors, each with distinct roles and responsibilities:
 
-### Ground Control (GC)
+### 2.1. Ground Control (GC)
 
 Admin actor responsible for system-wide management. GC can:
 
@@ -20,7 +20,7 @@ Admin actor responsible for system-wide management. GC can:
 - `GC_ADDRESS`: Ground Control address (0x...)
 - `GC_WALLET_GAS_ID`: Gas coin object ID for GC operations
 
-### User
+### 2.2. User
 
 Actor who wants to store their content in a decentralized manner. Users can:
 
@@ -34,11 +34,13 @@ Actor who wants to store their content in a decentralized manner. Users can:
 
 **Environment Variables:**
 
-- `USER_ADDRESS`: User address (0x...)
-- `USER_PRIVATE_KEY`: User private key (iotaprivkey1...)
-- `USER_GAS_COIN_ID`: Gas coin object ID for user operations
+- `ACTIVE_PRIVATE_KEY`: User private key, substitutes the old USER_PRIVATE_KEY (iotaprivkey1...)
+- `ACTIVE_ADDRESS`: User address; if omitted, it is considered USER_ADDRESS instead (0x...)
+- `USER_ADDRESS`: User address when ACTIVE_ADDRESS is not set. Only considered for user operations (0x...)
+- `ACTIVE_GAS_COIN_ID`: Gas coin object ID; if omitted, it is considered USER_GAS_COIN_ID instead (0x...)
+- `USER_GAS_COIN_ID`: Gas coin object ID when ACTIVE_GAS_COIN_ID is not set. Only considered for user operations (0x...)
 
-### Provider
+### 2.3. Provider
 
 Storage service provider actor who offers storage capacity for CIDs. Providers can:
 
@@ -48,9 +50,11 @@ Storage service provider actor who offers storage capacity for CIDs. Providers c
 
 **Environment Variables:**
 
-- `PROVIDER_ADDRESS`: Provider address (0x...)
-- `PROVIDER_PRIVATE_KEY`: Provider private key (iotaprivkey1...)
-- `PROVIDER_GAS_COIN_ID`: Gas coin object ID for provider operations
+- `ACTIVE_PRIVATE_KEY`: Provider private key, substitutes the old PROVIDER_PRIVATE_KEY (iotaprivkey1...)
+- `ACTIVE_ADDRESS`: Provider address; if omitted, it is considered PROVIDER_ADDRESS instead (0x...)
+- `PROVIDER_ADDRESS`: Provider address when ACTIVE_ADDRESS is not set. Only considered for provider operations (0x...)
+- `ACTIVE_GAS_COIN_ID`: Gas coin object ID; if omitted, it is considered PROVIDER_GAS_COIN_ID instead (0x...)
+- `PROVIDER_GAS_COIN_ID`: Gas coin object ID when ACTIVE_GAS_COIN_ID is not set. Only considered for provider operations (0x...)
 
 ## 3. CLI command lists
 
@@ -179,9 +183,9 @@ go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timesta
 - `[CID]`: CID string (if --type is 'cid') or file path (if --type is 'path')
 - `--epoch-start <timestamp>`: Next epoch start timestamp (required, 0 for default duration)
 - `--epoch-end <timestamp>`: Next epoch end timestamp (required, 0 for default duration)
-- `--user-private-key <key>`: Private key for signing(overrides USER_PRIVATE_KEY env var); if omitted you will be prompted to insert it <!-- TODO if omitted read from USER_PRIVATE_KEY -->
-- `--user-address <address>`: Address of the user (overwrites USER_ADDRESS env var)
-- `--user-coin-id <coin-id>`: Coin ID of the user (overwrites USER_GAS_COIN_ID env var)
+- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--user-coin-id <coin-id>`: Gas coin object ID of the user. It is used both to pay for the transaction and to create the gas coin object associated to the new CID object (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.2. Remove CID
 
@@ -197,9 +201,9 @@ go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--user-add
 
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
-- `--user-private-key <key>`: Private key for signing (overrides USER_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: Address of the user (overwrites USER_ADDRESS env var)
-- `--user-coin-id <coin-id>`: Coin ID of the user (overwrites USER_GAS_COIN_ID env var)
+- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--user-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.3. Check if CID is in List
 
@@ -230,7 +234,9 @@ go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--user
 
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
-- `--user-private-key <key>`: Private key for signing (overrides USER_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--user-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.5. Add Funds to CID
 
@@ -246,10 +252,10 @@ go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-i
 
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
-- `--coin-id <coin-id>`: Coin object ID to deposit (0x...) (required)
-- `--user-private-key <key>`: Private key for signing (overrides USER_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: User signer address (0x...) overrides env
-- `--user-gas-coin-id <coin-id>`: Gas coin object id (0x...) overrides env
+- `--coin-id <coin-id>`: Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
+- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--user-gas-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 ### 3.5. Offer Management
 
@@ -268,19 +274,10 @@ go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id
 - `--cid <cid>`: CID (object id 0x... or CID string) (required)
 - `--amount <amount>`: Offer amount (IOTA nanos) (required)
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
-- `--signer-address <address>`: Signer address (0x...) overrides env
-- `--signer-private-key <key>`: Signer private key (iotaprivkey1...); if omitted you will be prompted to insert it
-- `--gas-id <coin-id>`: Gas coin object id (0x...) overrides env
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
+- `--gas-id <coin-id>`: Gas coin object ID of the provider used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug (preflight + postflight)
-
-**Environment Variables:**
-
-- `PROVIDER_ADDRESS`: Provider signer address
-- `PROVIDER_GAS_COIN_ID`: Provider gas coin ID
-- `DCS_WHITELIST_ID`: Whitelist object ID
-- `DCS_CLOCK_ID`: Clock object ID (default: 0x6)
-- `DCS_PACKAGE_ID`: DCS package ID
-- `WALLET_GAS_BUDGET`: Gas budget (default: 10_000_000)
 
 #### 3.5.2. Approve Offer
 
@@ -297,18 +294,10 @@ go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|ci
 - `--cid <cid>`: CID (object id 0x... or CID string) (required)
 - `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
-- `--signer-address <address>`: Signer address (0x...) overrides env
-- `--signer-private-key <key>`: Signer private key (iotaprivkey1...); if omitted you will be prompted to insert it
-- `--gas-id <coin-id>`: Gas coin object id (0x...) overrides env
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
+- `--gas-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
-
-**Environment Variables:**
-
-- `USER_ADDRESS`: User signer address
-- `USER_GAS_COIN_ID`: User gas coin ID
-- `DCS_CLOCK_ID`: Clock object ID (default: 0x6)
-- `DCS_PACKAGE_ID`: DCS package ID
-- `WALLET_GAS_BUDGET`: Gas budget (default: 10_000_000)
 
 #### 3.5.3. Honor Offer
 
@@ -325,9 +314,9 @@ go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid
 - `--cid <cid>`: CID (object id 0x... or CID string) (required)
 - `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
-- `--signer-address <address>`: Signer address (0x...) overrides env
-- `--signer-private-key <key>`: Signer private key (iotaprivkey1...); if omitted you will be prompted to insert it
-- `--gas-id <coin-id>`: Gas coin object id (0x...) overrides env
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
+- `--gas-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
 
 #### 3.5.4. List Open Offers
@@ -366,9 +355,9 @@ go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] 
 - `--cid <cid>`: CID (object id 0x... or CID string) (required)
 - `--idx <index>`: Payment index to withdraw (0-based) (required)
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
-- `--signer-address <address>`: Signer address (0x...) overrides env
-- `--signer-private-key <key>`: Signer private key (iotaprivkey1... / suiprivkey1... or base64 keystore); if omitted, you will be prompted
-- `--gas-id <coin-id>`: Gas coin object id (0x...) overrides env
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted, you will be prompted
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
+- `--gas-id <coin-id>`: Gas coin object ID of the provider used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
 
 ## 4. Utils from Iota CLI

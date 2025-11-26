@@ -11,11 +11,11 @@ import (
 
 func NewHonorOfferCmd() *cobra.Command {
 	var (
-		flagSigner  string
-		flagPrivKey string
-		flagGasID   string
-		flagIdx     uint64
-		flagDebug   bool
+		signerFlag  string
+		privKeyFlag string
+		gasIDFlag   string
+		indexFlag   uint64
+		debugFlag   bool
 	)
 
 	cmd := &cobra.Command{
@@ -26,11 +26,6 @@ func NewHonorOfferCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			privKey, err := ResolvePrivateKey(p.PrivKey)
-			if err != nil {
-				return err
-			}
-			p.PrivKey = privKey
 
 			if p.Debug {
 				fmt.Println("== preflight ==")
@@ -68,13 +63,13 @@ func NewHonorOfferCmd() *cobra.Command {
 
 	cmd.Flags().String("cid", "", "CID (object id 0x... or CID string)")
 	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
-	cmd.Flags().Uint64Var(&flagIdx, "idx", 0, "Offer index in next_epoch_offers to approve (0-based)")
-	cmd.Flags().BoolVar(&flagDebug, "debug", false, "Verbose debug")
+	cmd.Flags().Uint64Var(&indexFlag, "idx", 0, "Offer index in next_epoch_offers to approve (0-based)")
+	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Verbose debug")
 
 	// optional overrides
-	cmd.Flags().StringVar(&flagSigner, "signer-address", "", "Signer address (0x...) overrides env")
-	cmd.Flags().StringVar(&flagPrivKey, "signer-private-key", "", "Signer private key (iotaprivkey1...) if omitted you will be promped to insert it")
-	cmd.Flags().StringVar(&flagGasID, "gas-id", "", "Gas coin object id (0x...) overrides env")
+	cmd.Flags().StringVar(&signerFlag, "signer-address", "", "Signer address (0x...) overrides env")
+	cmd.Flags().StringVar(&privKeyFlag, "signer-private-key", "", "Signer private key (iotaprivkey1...) if omitted you will be promped to insert it")
+	cmd.Flags().StringVar(&gasIDFlag, "gas-id", "", "Gas coin object id (0x...) overrides env")
 
 	_ = cmd.MarkFlagRequired("cid")
 	return cmd

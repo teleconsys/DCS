@@ -17,7 +17,8 @@ import (
 
 	"github.com/btcsuite/btcutil/bech32"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/blake2b"
+
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 // Command: dcs iota_sc account new --alias <name> [--no_faucet] [--faucet-amount <n>]
@@ -51,7 +52,7 @@ func newAccountCmd() *cobra.Command {
 				return fmt.Errorf("encode private key: %w", err)
 			}
 			// 2) Derive address: 0x + sha3-256(pub).
-			addr := deriveAddress(pub)
+			addr := wallet.DeriveAddress(pub)
 
 			// 3) Save to ./accounts/<alias>.json (relative to execution folder).
 			wd, err := os.Getwd()
@@ -115,12 +116,6 @@ func newAccountCmd() *cobra.Command {
 	newCmd.Flags().Uint64Var(&faucetAmount, "faucet-amount", 0, "Optional amount to request from faucet")
 	cmd.AddCommand(newCmd)
 	return cmd
-}
-
-// Ed25519 address = 0x + blake2b-256(pubkey)
-func deriveAddress(pub ed25519.PublicKey) string {
-	sum := blake2b.Sum256(pub)
-	return "0x" + hex.EncodeToString(sum[:])
 }
 
 func faucetRequest(base, addr string, amt uint64) error {

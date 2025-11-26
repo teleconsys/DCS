@@ -4,10 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"strconv"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
+	"github.com/spf13/cobra"
+	cidlib "github.com/teleconsys/DCS/internal/cid"
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type SubmitOfferParams struct {
@@ -31,6 +35,118 @@ type SubmitOfferParams struct {
 
 	// debug
 	Debug bool
+}
+
+// LoadSubmitOfferParams loads parameters from command flags and environment variables
+func LoadSubmitOfferParams(ctx context.Context, cmd *cobra.Command, args []string) (SubmitOfferParams, error) {
+	var p SubmitOfferParams
+
+	// Get CID from flag
+	cidArg, _ := cmd.Flags().GetString("cid")
+	if cidArg == "" {
+		return p, fmt.Errorf("--cid is required (object id 0x... or CID string)")
+	}
+
+	// Get CID type
+	cidType, _ := cmd.Flags().GetString("cid-type")
+	if cidType == "" {
+		cidType = "id" // default
+	}
+	if cidType != "id" && cidType != "cid" {
+		return p, fmt.Errorf("--cid-type must be 'id' or 'cid'")
+	}
+
+	// Get amount from flag
+	amount, _ := cmd.Flags().GetUint64("amount")
+	if amount == 0 {
+		return p, fmt.Errorf("--amount must be > 0 (IOTA nanos)")
+	}
+	p.Amount = amount
+
+	// Get RPC URL (needed for CID resolution)
+	rpc := os.Getenv("REBASE_RPC")
+	if rpc == "" {
+		rpc = "https://api.testnet.iota.cafe:443"
+	}
+	p.RPCURL = rpc
+
+	// Resolve CID to object ID if needed
+	cidObjectID := cidArg
+	if cidType == "cid" {
+		id, err := cidlib.GetCIDIdFromList(ctx, cidArg, rpc)
+		if err != nil {
+			return p, err
+		}
+		cidObjectID = id
+	}
+	p.CIDObjectID = cidObjectID
+
+	// Get debug flag
+	debug, _ := cmd.Flags().GetBool("debug")
+	p.Debug = debug
+
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
+	}
+	p.PrivKey = privKey
+
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "PROVIDER_ADDRESS")
+	if err != nil {
+		return p, err
+	}
+	p.Signer = signer
+
+	// Get gas coin ID: flags > ACTIVE_* > PROVIDER_*
+	gasIDFlag, _ := cmd.Flags().GetString("gas-id")
+	gasID := wallet.FirstNonEmpty(
+		gasIDFlag,
+		os.Getenv("ACTIVE_GAS_COIN_ID"),
+		os.Getenv("PROVIDER_GAS_COIN_ID"),
+	)
+	if gasID == "" {
+		return p, fmt.Errorf("missing gas coin id (set --gas-id or ACTIVE_GAS_COIN_ID / PROVIDER_GAS_COIN_ID)")
+	}
+	p.GasID = gasID
+
+	// Get Clock ID
+	clockID := os.Getenv("DCS_CLOCK_ID")
+	if clockID == "" {
+		clockID = "0x6"
+	}
+	p.ClockID = clockID
+
+	// Get Package ID
+	packageID := os.Getenv("DCS_PACKAGE_ID")
+	if packageID == "" {
+		return p, fmt.Errorf("missing DCS_PACKAGE_ID env var")
+	}
+	p.PackageID = packageID
+
+	// Get Whitelist ID
+	whitelistID := os.Getenv("DCS_WHITELIST_ID")
+	if whitelistID == "" {
+		return p, fmt.Errorf("missing DCS_WHITELIST_ID env var")
+	}
+	p.WhitelistID = whitelistID
+
+	// Get Gas Budget
+	gasBudgetStr := os.Getenv("WALLET_GAS_BUDGET")
+	if gasBudgetStr == "" {
+		p.GasBudget = 10_000_000 // default
+	} else {
+		gasBudget, err := strconv.ParseUint(gasBudgetStr, 10, 64)
+		if err != nil {
+			return p, fmt.Errorf("invalid WALLET_GAS_BUDGET: %w", err)
+		}
+		p.GasBudget = gasBudget
+	}
+
+	return p, nil
 }
 
 // SubmitReplicaOffer builds, signs, executes:

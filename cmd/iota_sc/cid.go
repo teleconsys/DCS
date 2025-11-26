@@ -94,14 +94,6 @@ Examples:
 				return err
 			}
 
-			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
-			privKey, err := ResolvePrivateKey(flagPrivKey)
-			if err != nil {
-				cmd.PrintErrf("Invalid private key: %v\n", err)
-				return err
-			}
-			params.UserPrivateKey = privKey
-
 			// Split coin first to get the coin ID for CID creation
 			cmd.Printf("Creating a new gas coin for the CID creation...\n")
 			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, 100000)
@@ -165,14 +157,6 @@ func removeCidCmd() *cobra.Command {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
-
-			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
-			privKey, err := ResolvePrivateKey(flagPrivKey)
-			if err != nil {
-				cmd.PrintErrf("Invalid private key: %v\n", err)
-				return err
-			}
-			params.UserPrivateKey = privKey
 
 			// Remove CID using new wrapper
 			_, err = cid_sc.RemoveCID(cmd.Context(), params)
@@ -246,30 +230,23 @@ func transitionEpochCmd() *cobra.Command {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
-			flagPrivKey, _ := cmd.Flags().GetString("user-private-key")
-			privKey, err := ResolvePrivateKey(flagPrivKey)
+
+			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
+
 			if err != nil {
-				cmd.PrintErrf("Invalid private key: %v\n", err)
+				cmd.PrintErrf("Failed to transition epoch: %v\n", err)
 				return err
 			}
-			params.UserPrivateKey = privKey
 
-		_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
+			fmt.Printf("Epoch transition successful\n")
+			return nil
+		},
+	}
 
-		if err != nil {
-			cmd.PrintErrf("Failed to transition epoch: %v\n", err)
-			return err
-		}
+	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
+	cmd.MarkFlagRequired("cid-type")
 
-		fmt.Printf("Epoch transition successful\n")
-		return nil
-	},
-}
-
-cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
-cmd.MarkFlagRequired("cid-type")
-
-return cmd
+	return cmd
 }
 
 /*

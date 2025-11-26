@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type CreateParams struct {
@@ -92,25 +93,33 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
 	}
 
-	// Get private key: flag takes priority over env var
-	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
-		p.UserPrivateKey = privateKeyFlag
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("user-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
 	}
+	p.UserPrivateKey = privKey
 
-	// Get user signer address
-	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
-		p.UserSignerAddress = signerAddress
-	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv
-	} else {
-		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("user-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
+	if err != nil {
+		return p, err
 	}
+	p.UserSignerAddress = signer
 
-	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
-	p.GasID = os.Getenv("USER_GAS_COIN_ID")
-	if p.GasID == "" {
-		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
+	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation (flags > ACTIVE_* > USER_*)
+	gasIDFlag, _ := cmd.Flags().GetString("user-coin-id")
+	gasID := wallet.FirstNonEmpty(
+		gasIDFlag,
+		os.Getenv("ACTIVE_GAS_COIN_ID"),
+		os.Getenv("USER_GAS_COIN_ID"),
+	)
+	if gasID == "" {
+		return p, fmt.Errorf("missing gas coin id (set --user-coin-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
 	}
+	p.GasID = gasID
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
 		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
@@ -144,7 +153,6 @@ func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount in
 	}
 
 	// Build unsigned transaction
-	fmt.Println("Building transaction pay iota to create a new gas coin...")
 	txb, err := w.PayIotaUnsigned(ctx,
 		p.UserSignerAddress,                 // signer
 		[]string{p.GasID},                   // input_coins
@@ -166,7 +174,6 @@ func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount in
 	}
 
 	// Execute transaction
-	fmt.Println("Executing the transaction pay iota to create a new gas coin...")
 	opts := &suitypes.SuiTransactionBlockResponseOptions{
 		ShowEffects:       true,
 		ShowEvents:        true,

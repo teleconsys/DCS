@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
 	cidlib "github.com/teleconsys/DCS/internal/cid"
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type HonorOfferParams struct {
@@ -25,15 +25,6 @@ type HonorOfferParams struct {
 	Signer      string
 	PrivKey     string
 	Debug       bool
-}
-
-func firstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if s := strings.TrimSpace(v); s != "" {
-			return s
-		}
-	}
-	return ""
 }
 
 // LoadHonorParams loads parameters from command flags and environment variables
@@ -78,26 +69,31 @@ func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (Ho
 	debug, _ := cmd.Flags().GetBool("debug")
 	p.Debug = debug
 
-	// Get signer address: flags > OWNER_* > USER_* > GC_*
-	flagSigner, _ := cmd.Flags().GetString("signer-address")
-	signer := firstNonEmpty(
-		flagSigner,
-		os.Getenv("USER_ADDRESS"),
-	)
-	if signer == "" {
-		return p, fmt.Errorf("missing signer address (set --signer-address or OWNER_ADDRESS / USER_ADDRESS / GC_ADDRESS)")
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
+	}
+	p.PrivKey = privKey
+
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
+	if err != nil {
+		return p, err
 	}
 	p.Signer = signer
-	flagPrivKey, _ := cmd.Flags().GetString("signer-private-key")
-	p.PrivKey = strings.TrimSpace(flagPrivKey)
-	// Get gas coin ID: flags > OWNER_* > USER_* > WALLET_*
-	flagGasID, _ := cmd.Flags().GetString("gas-id")
-	gasID := firstNonEmpty(
-		flagGasID,
+
+	// Get gas coin ID: flags > ACTIVE_* > USER_*
+	gasIDFlag, _ := cmd.Flags().GetString("gas-id")
+	gasID := wallet.FirstNonEmpty(
+		gasIDFlag,
+		os.Getenv("ACTIVE_GAS_COIN_ID"),
 		os.Getenv("USER_GAS_COIN_ID"),
 	)
 	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID)")
+		return p, fmt.Errorf("missing gas coin id (set --gas-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
 	}
 	p.GasID = gasID
 

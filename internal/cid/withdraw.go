@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type WithdrawParams struct {
@@ -25,16 +25,6 @@ type WithdrawParams struct {
 	Signer      string
 	PrivKey     string
 	Debug       bool
-}
-
-// firstNonEmpty returns the first non-empty string from the provided values
-func firstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if s := strings.TrimSpace(v); s != "" {
-			return s
-		}
-	}
-	return ""
 }
 
 // txStatusOK inspects effects status across SDK JSON shapes.
@@ -133,33 +123,31 @@ func LoadWithdrawParams(ctx context.Context, cmd *cobra.Command, args []string) 
 	debug, _ := cmd.Flags().GetBool("debug")
 	p.Debug = debug
 
-	// Get signer address: flags > OWNER_* > USER_* > GC_*
-	flagSigner, _ := cmd.Flags().GetString("signer-address")
-	signer := firstNonEmpty(
-		flagSigner,
-		os.Getenv("PROVIDER_ADDRESS"),
-	)
-	if signer == "" {
-		return p, fmt.Errorf("missing signer address (set --signer-address or OWNER_ADDRESS / USER_ADDRESS / GC_ADDRESS)")
-	}
-	p.Signer = signer
-
-	// Get private key: flags > OWNER_* > USER_* > GC_*
-	flagPrivKey, _ := cmd.Flags().GetString("signer-private-key")
-	privKey := flagPrivKey
-	if privKey == "" {
-		return p, fmt.Errorf("missing private key (set --signer-private-key or you will be prompet for it)")
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
 	}
 	p.PrivKey = privKey
 
-	// Get gas coin ID: flags > OWNER_* > USER_* > WALLET_*
-	flagGasID, _ := cmd.Flags().GetString("gas-id")
-	gasID := firstNonEmpty(
-		flagGasID,
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "PROVIDER_ADDRESS")
+	if err != nil {
+		return p, err
+	}
+	p.Signer = signer
+
+	// Get gas coin ID: flags > ACTIVE_* > PROVIDER_*
+	gasIDFlag, _ := cmd.Flags().GetString("gas-id")
+	gasID := wallet.FirstNonEmpty(
+		gasIDFlag,
+		os.Getenv("ACTIVE_GAS_COIN_ID"),
 		os.Getenv("PROVIDER_GAS_COIN_ID"),
 	)
 	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID)")
+		return p, fmt.Errorf("missing gas coin id (set --gas-id or ACTIVE_GAS_COIN_ID / PROVIDER_GAS_COIN_ID)")
 	}
 	p.GasID = gasID
 

@@ -522,28 +522,29 @@ iota client pay-iota --input-coins 0x55ed45ebd47a7c315856871b190e35b1457852862fa
 
 ## 5. Main Test Scenario
 
-This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
+This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
 
 - during the first 10 minutes of each epoch, an offer can be submitted by the user
 - after an offer has been approved, the user should honor it during the succeeding epoch (waiting 10 minutes before the epoch transition could be performed)
 
-### 1. Create CID (user)
+### 5.1. Create CID (user)
 
 ```bash
 go run main.go iota_sc cid create QmaQXHJTDFKkcgKaMBRLpG9pobg2a5ph44kF5Z8u2UU2iG --epoch-start 0 --epoch-end 0 --type cid
 ```
 
-### 2. Submit Offer (provider)
+### 5.2. Submit Offer (provider)
 
 ```bash
-go run main.go iota_sc submit_offer --cid 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --amount 100000 --cid-type id
+go run main.go iota_sc submit_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --amount 100000 --cid-type id
 ```
 
 **Notes:**
 
-- Must be executed within the time limit
+- Must be executed within the time limit (before the timer from the following command is expired)
+- After the command, the offer is in the **next** epoch, with `approved: false`, `honored: false`, `paid: false`
 
-### 3. List Open Offers
+### 5.3. List Open Offers
 
 ```bash
 go run main.go iota_sc list-open-offers
@@ -553,58 +554,58 @@ go run main.go iota_sc list-open-offers
 
 - Shows active offers and the time after which they can be approved
 
-### 4. Approve Offer (user)
+### 5.4. Approve Offer (user)
 
 ```bash
-go run main.go iota_sc approve_offer --cid 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --cid-type id --idx 0
+go run main.go iota_sc approve_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id --idx 0
 ```
 
 **Notes:**
 
 - Execute immediately after the time limit for submitting offers has expired
-- The offer is in the current epoch, with `approved: true`, `honored: false`, `paid: false`
+- After the command, the offer is in the **next** epoch, with `approved: true`, `honored: false`, `paid: false`
 
-### 5. Transition to Next Epoch (user)
+### 5.5. Transition to Next Epoch (user)
 
 ```bash
-go run main.go iota_sc cid next-epoch 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --cid-type id
+go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id
 ```
 
 **Notes:**
 
 - Execute immediately after the previous step
 - Only effective after the actual end of the current epoch
-- The offer is in the previous epoch, with `approved: true`, `honored: true`, `paid: false`
+- After the command, the offer is in the **current** epoch, with `approved: true`, `honored: false`, `paid: false`
 
-### 6. Honor Offer (user)
+### 5.6. Honor Offer (user)
 
 ```bash
-go run main.go iota_sc honor_offer --cid 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --idx 0
+go run main.go iota_sc honor_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --idx 0
 ```
 
 **Notes:**
 
 - Must be executed before the end of the current epoch
-- The offer is in the current epoch, with `approved: true`, `honored: true`, `paid: false`
+- After the command, the offer is in the **current** epoch, with `approved: true`, `honored: true`, `paid: false`
 
-### 7. Transition to Next Epoch (Again) (user)
+### 5.7. Transition to Next Epoch (Again) (user)
 
 ```bash
-go run main.go iota_sc cid next-epoch 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --cid-type id
+go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id
 ```
 
 **Notes:**
 
 - Only effective after the actual end of the current epoch
-- The offer is in the previous epoch, with `approved: true`, `honored: true`, `paid: false`
+- After the command, the offer is in the **previous** epoch, with `approved: true`, `honored: true`, `paid: false`
 
-### 8. Withdraw (provider)
+### 5.8. Withdraw (provider)
 
 ```bash
-go run main.go iota_sc withdraw --cid 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --cid-type id --idx 0
+go run main.go iota_sc withdraw --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id --idx 0
 ```
 
 **Notes:**
 
 - Execute after the ex-current epoch (now previous epoch) has ended and before transitioning to the next one
-- The offer is in the previous epoch, with `approved: true`, `honored: true`, `paid: true`
+- After the command, the offer is in the **previous** epoch, with `approved: true`, `honored: true`, `paid: true`

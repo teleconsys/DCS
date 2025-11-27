@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
@@ -162,4 +163,63 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 
 	return true, nil
 
+}
+
+// CheckEpochTransitionAllowed verifies that the current timestamp allows epoch transition.
+// Transition is only allowed after current_epoch_end has passed.
+func CheckEpochTransitionAllowed(ctx context.Context, cidArg, cidType, rpcURL string) error {
+	// Get CID object ID
+	cidObjectID := cidArg
+	if cidType == "cid" {
+		var err error
+		cidObjectID, err = GetCIDIdFromList(ctx, cidArg, rpcURL)
+		if err != nil {
+			return fmt.Errorf("failed to get CID ID: %w", err)
+		}
+	}
+
+	// Dial RPC
+	w, err := rebased.Dial(rpcURL)
+	if err != nil {
+		return fmt.Errorf("rpc dial failed: %w", err)
+	}
+
+	// Get CID fields
+	fields, err := GetCIDFields(ctx, w, cidObjectID)
+	if err != nil {
+		return fmt.Errorf("failed to get CID fields: %w", err)
+	}
+
+	// Extract current_epoch_end
+	currentEpochEndRaw := fields["current_epoch_end"]
+	currentEpochEnd := asI64FromFields(currentEpochEndRaw)
+
+	// Get current timestamp in milliseconds
+	nowMs := time.Now().UnixMilli()
+
+	// Check if transition is allowed (only after current_epoch_end)
+	if nowMs < currentEpochEnd {
+		remainingMs := currentEpochEnd - nowMs
+		remainingMinutes := remainingMs / 60_000
+		return fmt.Errorf("epoch transition not allowed yet: current epoch ends in %d minutes (at timestamp %d, current: %d). Transition is only effective after the actual end of the current epoch", remainingMinutes, currentEpochEnd, nowMs)
+	}
+
+	return nil
+}
+
+// asI64FromFields converts a field value to int64, similar to offers.asI64
+func asI64FromFields(v any) int64 {
+	switch t := v.(type) {
+	case string:
+		u, _ := strconv.ParseUint(t, 10, 64)
+		return int64(u)
+	case float64:
+		return int64(t)
+	case int64:
+		return t
+	case int:
+		return int64(t)
+	default:
+		return 0
+	}
 }

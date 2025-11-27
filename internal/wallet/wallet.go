@@ -199,7 +199,7 @@ func ResolveSignerAddress(privKey string, flagSignerAddress string, envVars ...s
 	// If no flag/env address is provided, use the derived address
 	if flagOrEnvAddr == "" {
 		// TODO set address in the .env file
-		fmt.Fprintf(os.Stderr, "Using address: %s\n", derivedAddr)
+		fmt.Fprintf(os.Stderr, "🔑 Using address: %s\n", derivedAddr)
 		return derivedAddr, nil
 	}
 
@@ -207,7 +207,7 @@ func ResolveSignerAddress(privKey string, flagSignerAddress string, envVars ...s
 	if derivedAddr == flagOrEnvAddr {
 		// 3.1. Addresses match, use it
 		// TODO set address in the .env file
-		fmt.Fprintf(os.Stderr, "Using address: %s\n", derivedAddr)
+		fmt.Fprintf(os.Stderr, "🔑 Using address: %s\n", derivedAddr)
 		return derivedAddr, nil
 	}
 
@@ -227,7 +227,7 @@ func ResolveSignerAddress(privKey string, flagSignerAddress string, envVars ...s
 	response = strings.TrimSpace(strings.ToLower(response))
 	if response == "y" || response == "yes" || response == "Y" {
 		// TODO set address in the .env file
-		fmt.Fprintf(os.Stderr, "Using address: %s\n", derivedAddr)
+		fmt.Fprintf(os.Stderr, "🔑 Using address: %s\n", derivedAddr)
 		return derivedAddr, nil
 	}
 

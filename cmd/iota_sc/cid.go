@@ -227,18 +227,25 @@ func transitionEpochCmd() *cobra.Command {
 			// Load parameters using the new wrapper
 			params, err := cid_sc.LoadTransitionParams(cmd, args)
 			if err != nil {
-				cmd.PrintErrf("Failed to load parameters: %v\n", err)
+				cmd.PrintErrf("❌ Failed to load parameters: %v\n", err)
+				return err
+			}
+
+			// Check if epoch transition is allowed (only after current_epoch_end)
+			cidType, _ := cmd.Flags().GetString("cid-type")
+			if err := cid_sc.CheckEpochTransitionAllowed(cmd.Context(), args[0], cidType, params.RPCURL); err != nil {
+				cmd.PrintErrf("❌ Epoch transition not allowed\n")
 				return err
 			}
 
 			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
 
 			if err != nil {
-				cmd.PrintErrf("Failed to transition epoch: %v\n", err)
+				cmd.PrintErrf("❌ Failed to transition epoch: %v\n", err)
 				return err
 			}
 
-			fmt.Printf("Epoch transition successful\n")
+			fmt.Printf("✅ Epoch transition successful\n")
 			return nil
 		},
 	}

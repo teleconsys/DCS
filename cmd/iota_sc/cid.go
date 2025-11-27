@@ -234,8 +234,8 @@ func transitionEpochCmd() *cobra.Command {
 			// Check if epoch transition is allowed (only after current_epoch_end)
 			cidType, _ := cmd.Flags().GetString("cid-type")
 			if err := cid_sc.CheckEpochTransitionAllowed(cmd.Context(), args[0], cidType, params.RPCURL); err != nil {
-				cmd.PrintErrf("❌ Epoch transition not allowed\n")
-				return err
+				cmd.Printf("⚠️  Warning: %v\n", err)
+				return nil
 			}
 
 			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])

@@ -201,7 +201,7 @@ func CheckEpochTransitionAllowed(ctx context.Context, cidArg, cidType, rpcURL st
 	if nowMs < currentEpochEnd {
 		remainingMs := currentEpochEnd - nowMs
 		remainingMinutes := remainingMs / 60_000
-		return fmt.Errorf("epoch transition not allowed yet: current epoch ends in %d minutes (at timestamp %d, current: %d). Transition is only effective after the actual end of the current epoch", remainingMinutes, currentEpochEnd, nowMs)
+		return fmt.Errorf("epoch transition not allowed yet. Current epoch ends in %d minutes (at timestamp %d, current: %d). Transition is only effective after the actual end of the current epoch", remainingMinutes, currentEpochEnd, nowMs)
 	}
 
 	return nil

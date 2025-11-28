@@ -108,7 +108,7 @@ func newWhitelistAddCmd() *cobra.Command {
 	}
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
 	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
 	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
 	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
 	return c
@@ -147,7 +147,7 @@ func newWhitelistRemoveCmd() *cobra.Command {
 	}
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to remove (0x...)")
 	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
 	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
 	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
 	return c

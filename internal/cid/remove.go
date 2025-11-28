@@ -71,7 +71,7 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	}
 
 	// Read private key
-	privKeyFlag, _ := cmd.Flags().GetString("user-private-key")
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
 	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
 	if err != nil {
 		return p, err
@@ -79,7 +79,7 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	p.UserPrivateKey = privKey
 
 	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
-	signerFlag, _ := cmd.Flags().GetString("user-address")
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
 	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
 	if err != nil {
 		return p, err
@@ -87,14 +87,14 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	p.UserSignerAddress = signer
 
 	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation (flags > ACTIVE_* > USER_*)
-	gasIDFlag, _ := cmd.Flags().GetString("user-coin-id")
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
 	gasID := wallet.FirstNonEmpty(
 		gasIDFlag,
 		os.Getenv("ACTIVE_GAS_COIN_ID"),
 		os.Getenv("USER_GAS_COIN_ID"),
 	)
 	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --user-coin-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
+		return p, fmt.Errorf("missing gas coin id (set --signer-gas-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
 	}
 	p.GasID = gasID
 

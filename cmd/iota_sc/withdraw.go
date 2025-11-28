@@ -47,7 +47,7 @@ func NewWithdrawCmd() *cobra.Command {
 	cmd.Flags().StringVar(&signerFlag, "signer-address", "", "Signer address (0x...) overrides env")
 	cmd.Flags().StringVar(&privKeyFlag, "signer-private-key", "",
 		"Signer private key (iotaprivkey1... / suiprivkey1... or base64 keystore); if omitted, you will be prompted")
-	cmd.Flags().StringVar(&gasIDFlag, "gas-id", "", "Gas coin object id (0x...) overrides env")
+	cmd.Flags().StringVar(&gasIDFlag, "signer-gas-id", "", "Gas coin object id (0x...) overrides env")
 
 	_ = cmd.MarkFlagRequired("cid")
 	_ = cmd.MarkFlagRequired("idx")

@@ -102,14 +102,14 @@ func LoadSubmitOfferParams(ctx context.Context, cmd *cobra.Command, args []strin
 	p.Signer = signer
 
 	// Get gas coin ID: flags > ACTIVE_* > PROVIDER_*
-	gasIDFlag, _ := cmd.Flags().GetString("gas-id")
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
 	gasID := wallet.FirstNonEmpty(
 		gasIDFlag,
 		os.Getenv("ACTIVE_GAS_COIN_ID"),
 		os.Getenv("PROVIDER_GAS_COIN_ID"),
 	)
 	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --gas-id or ACTIVE_GAS_COIN_ID / PROVIDER_GAS_COIN_ID)")
+		return p, fmt.Errorf("missing gas coin id (set --signer-gas-id or ACTIVE_GAS_COIN_ID / PROVIDER_GAS_COIN_ID)")
 	}
 	p.GasID = gasID
 

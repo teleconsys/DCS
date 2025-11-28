@@ -126,7 +126,7 @@ go run main.go iota_sc whitelist has [ADDRESS] [--member <address>] [--print-add
 #### 3.3.2. Add Address to Whitelist
 
 ```bash
-go run main.go iota_sc whitelist add [ADDRESS] [--member <address>] [--package-id <id>] [--gas <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
+go run main.go iota_sc whitelist add [ADDRESS] [--member <address>] [--package-id <id>] [--signer-gas-id <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
 ```
 
 **Description:**
@@ -139,14 +139,14 @@ go run main.go iota_sc whitelist add [ADDRESS] [--member <address>] [--package-i
 - `[ADDRESS]`: Address to add (0x...) - either this or `--member` must be specified
 - `--member, -m <address>`: Address/ID to add (0x...) - either this or `ADDRESS` must be specified
 - `--package-id <id>`: DCS package ID (0x...)
-- `--gas <coin-id>`: Gas coin object ID (0x...)
+- `--signer-gas-id <coin-id>`: Gas coin object ID (0x...)
 - `--gas-budget <amount>`: Gas budget (nanos)
 - `--id <whitelist-id>`: Whitelist object ID (0x...) to use for this command. Takes priority over `DCS_WHITELIST_ID` env var
 
 #### 3.3.3. Remove Address from Whitelist
 
 ```bash
-go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--package-id <id>] [--gas <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
+go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--package-id <id>] [--signer-gas-id <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
 ```
 
 **Description:**
@@ -159,7 +159,7 @@ go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--packag
 - `[ADDRESS]`: Address to remove (0x...) - either this or `--member` must be specified
 - `--member, -m <address>`: Address/ID to remove (0x...) - either this or `ADDRESS` must be specified
 - `--package-id <id>`: DCS package ID (0x...)
-- `--gas <coin-id>`: Gas coin object ID (0x...)
+- `--signer-gas-id <coin-id>`: Gas coin object ID (0x...)
 - `--gas-budget <amount>`: Gas budget (nanos)
 - `--id <whitelist-id>`: Whitelist object ID (0x...) to use for this command. Takes priority over `DCS_WHITELIST_ID` env var
 
@@ -168,7 +168,7 @@ go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--packag
 #### 3.4.1. Create CID
 
 ```bash
-go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timestamp> --epoch-end <timestamp> [--user-address <address>] [--user-private-key <key>] [--user-coin-id <coin-id>]
+go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timestamp> --epoch-end <timestamp> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -183,14 +183,14 @@ go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timesta
 - `[CID]`: CID string (if --type is 'cid') or file path (if --type is 'path')
 - `--epoch-start <timestamp>`: Next epoch start timestamp (required, 0 for default duration)
 - `--epoch-end <timestamp>`: Next epoch end timestamp (required, 0 for default duration)
-- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
-- `--user-coin-id <coin-id>`: Gas coin object ID of the user. It is used both to pay for the transaction and to create the gas coin object associated to the new CID object (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID. It is used both to pay for the transaction and to create the gas coin object associated to the new CID object (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.2. Remove CID
 
 ```bash
-go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--user-address <address>] [--user-private-key <key>] [--user-coin-id <coin-id>]
+go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -201,9 +201,9 @@ go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--user-add
 
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
-- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
-- `--user-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.3. Check if CID is in List
 
@@ -223,7 +223,7 @@ go run main.go iota_sc cid is-in-list --cid-type <id|cid> [objectId|cid]
 #### 3.4.4. Transition to Next Epoch
 
 ```bash
-go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--user-private-key <key>]
+go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--signer-private-key <key>]
 ```
 
 **Description:**
@@ -234,14 +234,14 @@ go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--user
 
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
-- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
-- `--user-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 #### 3.4.5. Add Funds to CID
 
 ```bash
-go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-id <coin-id> [--user-address <address>] [--user-private-key <key>] [--user-gas-coin-id <coin-id>]
+go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-id <coin-id> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -253,16 +253,16 @@ go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-i
 - `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
 - `[objectId|cid]`: CID object ID or CID string
 - `--coin-id <coin-id>`: Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
-- `--user-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
-- `--user-address <address>`: Address of the user (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
-- `--user-gas-coin-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
 
 ### 3.5. Offer Management
 
 #### 3.5.1. Submit Offer
 
 ```bash
-go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--gas-id <coin-id>] [--debug]
+go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -276,13 +276,13 @@ go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
-- `--gas-id <coin-id>`: Gas coin object ID of the provider used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug (preflight + postflight)
 
 #### 3.5.2. Approve Offer
 
 ```bash
-go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--gas-id <coin-id>] [--debug]
+go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -296,13 +296,13 @@ go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|ci
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
-- `--gas-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
 
 #### 3.5.3. Honor Offer
 
 ```bash
-go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--gas-id <coin-id>] [--debug]
+go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -316,7 +316,7 @@ go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
-- `--gas-id <coin-id>`: Gas coin object ID of the user used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
 
 #### 3.5.4. List Open Offers
@@ -343,7 +343,7 @@ go run main.go iota_sc list-open-offers [--graphql-endpoint <url>] [--cidlist-id
 #### 3.5.5. Withdraw
 
 ```bash
-go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--gas-id <coin-id>] [--debug]
+go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -357,7 +357,7 @@ go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] 
 - `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted, you will be prompted
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
-- `--gas-id <coin-id>`: Gas coin object ID of the provider used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
 - `--debug`: Verbose debug
 
 ## 4. Utils from Iota CLI

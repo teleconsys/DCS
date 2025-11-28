@@ -131,9 +131,9 @@ Examples:
 	cmd.Flags().String("type", "", "Type of input (path or cid)")
 	cmd.Flags().Uint64("epoch-start", 0, "Next epoch start timestamp (required)")
 	cmd.Flags().Uint64("epoch-end", 0, "Next epoch end timestamp (required)")
-	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be promped to insert it")
-	cmd.Flags().String("user-address", "", "Address of the user (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
-	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
+	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be promped to insert it")
+	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
+	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
 	// Mark required flags
 	cmd.MarkFlagRequired("type")
@@ -171,9 +171,9 @@ func removeCidCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
-	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
-	cmd.Flags().String("user-address", "", "Address of the user (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
-	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
+	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
+	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
+	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
 	cmd.MarkFlagRequired("cid-type")
 	return cmd
@@ -251,9 +251,9 @@ func transitionEpochCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
-	cmd.Flags().String("user-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
-	cmd.Flags().String("user-address", "", "Address of the user (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
-	cmd.Flags().String("user-coin-id", "", "Coin ID of the user (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
+	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
+	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
+	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
 	cmd.MarkFlagRequired("cid-type")
 	return cmd
@@ -304,9 +304,9 @@ func addFundsCidCmd() *cobra.Command {
 
 	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
 	cmd.Flags().String("coin-id", "", "Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed.")
-	cmd.Flags().String("user-address", "", "User signer address (0x...) overrides env")
-	cmd.Flags().String("user-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
-	cmd.Flags().String("user-gas-coin-id", "", "Gas coin object ID to pay for the transaction (0x...) overrides env")
+	cmd.Flags().String("signer-address", "", "Signer address (0x...) overrides env")
+	cmd.Flags().String("signer-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
+	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID to pay for the transaction (0x...) overrides env")
 
 	cmd.MarkFlagRequired("cid-type")
 	cmd.MarkFlagRequired("coin-id")

@@ -69,7 +69,7 @@ func NewHonorOfferCmd() *cobra.Command {
 	// optional overrides
 	cmd.Flags().StringVar(&signerFlag, "signer-address", "", "Signer address (0x...) overrides env")
 	cmd.Flags().StringVar(&privKeyFlag, "signer-private-key", "", "Signer private key (iotaprivkey1...) if omitted you will be promped to insert it")
-	cmd.Flags().StringVar(&gasIDFlag, "gas-id", "", "Gas coin object id (0x...) overrides env")
+	cmd.Flags().StringVar(&gasIDFlag, "signer-gas-id", "", "Gas coin object id (0x...) overrides env")
 
 	_ = cmd.MarkFlagRequired("cid")
 	return cmd

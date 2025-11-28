@@ -43,10 +43,10 @@ The command will create a CID object with the specified epoch parameters and ini
 
 Examples:
   # Create CID object with existing CID
-  iota_sc cid create --type cid QmWtM9FSHL8pvXVGT9dGumMSFLoGZJqRNsikSB9mWq5KgZ --coins 1000000 --epoch-start 1000 --epoch-end 2000
+  iota_sc cid create --type cid QmWtM9FSHL8pvXVGT9dGumMSFLoGZJqRNsikSB9mWq5KgZ --amount 1000000 --epoch-start 1000 --epoch-end 2000
 
   # Upload a file to IPFS and create CID object
-  iota_sc cid create --type path /path/to/your/file.txt --coins 1000000 --epoch-start 1000 --epoch-end 2000`,
+  iota_sc cid create --type path /path/to/your/file.txt --amount 1000000 --epoch-start 1000 --epoch-end 2000`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var cidStr string
@@ -96,7 +96,7 @@ Examples:
 
 			// Split coin first to get the coin ID for CID creation
 			cmd.Printf("Creating a new gas coin for the CID creation...\n")
-			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, 100000)
+			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, int64(params.Amount))
 			if err != nil {
 				cmd.PrintErrf("Failed to create a new gas coin: %v\n", err)
 				return err
@@ -131,6 +131,7 @@ Examples:
 	cmd.Flags().String("type", "", "Type of input (path or cid)")
 	cmd.Flags().Uint64("epoch-start", 0, "Next epoch start timestamp (required)")
 	cmd.Flags().Uint64("epoch-end", 0, "Next epoch end timestamp (required)")
+	cmd.Flags().Uint64("amount", 100000, "Amount for the gas coin object associated to the CID object (IOTA nanos, default: 100000)")
 	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be promped to insert it")
 	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")

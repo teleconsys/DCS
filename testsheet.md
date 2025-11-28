@@ -168,7 +168,7 @@ go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--packag
 #### 3.4.1. Create CID
 
 ```bash
-go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timestamp> --epoch-end <timestamp> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timestamp> --epoch-end <timestamp> [--amount <amount>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -183,6 +183,7 @@ go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timesta
 - `[CID]`: CID string (if --type is 'cid') or file path (if --type is 'path')
 - `--epoch-start <timestamp>`: Next epoch start timestamp (required, 0 for default duration)
 - `--epoch-end <timestamp>`: Next epoch end timestamp (required, 0 for default duration)
+- `--amount <amount>`: Amount for the gas coin object associated to the CID object (IOTA nanos, default: 100000)
 - `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
 - `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
 - `--signer-gas-id <coin-id>`: Gas coin object ID. It is used both to pay for the transaction and to create the gas coin object associated to the new CID object (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)

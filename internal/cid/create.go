@@ -23,6 +23,7 @@ type CreateParams struct {
 	CID               string
 	EpochStart        uint64
 	EpochEnd          uint64
+	Amount            uint64
 	WhitelistID       string
 	CIDListID         string
 	PackageID         string
@@ -46,6 +47,13 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	epochEnd, _ := cmd.Flags().GetUint64("epoch-end")
 	p.EpochStart = epochStart
 	p.EpochEnd = epochEnd
+
+	// Get amount from flag
+	amount, _ := cmd.Flags().GetUint64("amount")
+	if amount == 0 {
+		amount = 100000 // default value
+	}
+	p.Amount = amount
 
 	// Auto-compute epochs when user passes 0 (no pre-computation needed)
 	if p.EpochStart == 0 || p.EpochEnd == 0 {

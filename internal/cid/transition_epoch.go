@@ -47,6 +47,18 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or pass --package-id (0x...)")
 	}
 
+	// Get RPC URL
+	p.RPCURL = viper.GetString("rpc")
+	if p.RPCURL == "" {
+		if u := os.Getenv("REBASE_RPC"); u != "" {
+			p.RPCURL = u
+		} else if u := os.Getenv("DCS_RPC"); u != "" {
+			p.RPCURL = u
+		} else {
+			p.RPCURL = "https://api.testnet.iota.cafe:443"
+		}
+	}
+
 	// Read private key
 	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
 	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
@@ -63,15 +75,11 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 	}
 	p.UserSignerAddress = signer
 
-	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation (flags > ACTIVE_* > USER_*)
+	// Resolve gas coin ID and verify ownership
 	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
-	gasID := wallet.FirstNonEmpty(
-		gasIDFlag,
-		os.Getenv("ACTIVE_GAS_COIN_ID"),
-		os.Getenv("USER_GAS_COIN_ID"),
-	)
-	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --signer-gas-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
+	gasID, err := wallet.ResolveGasCoinId(cmd.Context(), gasIDFlag, signer, p.RPCURL, "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+	if err != nil {
+		return p, err
 	}
 	p.GasID = gasID
 
@@ -82,18 +90,6 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 	}
 	if p.GasBudget == 0 {
 		p.GasBudget = 10_000_000 // default
-	}
-
-	// Get RPC URL
-	p.RPCURL = viper.GetString("rpc")
-	if p.RPCURL == "" {
-		if u := os.Getenv("REBASE_RPC"); u != "" {
-			p.RPCURL = u
-		} else if u := os.Getenv("DCS_RPC"); u != "" {
-			p.RPCURL = u
-		} else {
-			p.RPCURL = "https://api.testnet.iota.cafe:443"
-		}
 	}
 
 	return p, nil

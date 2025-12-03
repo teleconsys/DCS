@@ -88,15 +88,11 @@ func LoadApproveOfferParams(ctx context.Context, cmd *cobra.Command, args []stri
 	}
 	p.Signer = signer
 
-	// Get gas coin ID: flags > ACTIVE_* > USER_*
+	// Resolve gas coin ID and verify ownership
 	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
-	gasID := wallet.FirstNonEmpty(
-		gasIDFlag,
-		os.Getenv("ACTIVE_GAS_COIN_ID"),
-		os.Getenv("USER_GAS_COIN_ID"),
-	)
-	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --signer-gas-id or ACTIVE_GAS_COIN_ID / USER_GAS_COIN_ID)")
+	gasID, err := wallet.ResolveGasCoinId(ctx, gasIDFlag, signer, p.RPCURL, "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+	if err != nil {
+		return p, err
 	}
 	p.GasID = gasID
 

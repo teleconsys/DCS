@@ -2,14 +2,17 @@ package wallet
 
 import (
 	"bufio"
+	"context"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 
+	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/teleconsys/DCS/internal/rebased"
@@ -246,4 +249,127 @@ func FirstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// ResolveGasCoinId resolves the gas coin ID to use for a transaction.
+//
+// It performs the following steps:
+//  1. Reads the gas coin ID from flag/env (precedence: flag > env vars)
+//  2. Verifies that the gas coin belongs to the signer address by querying the blockchain
+//  3. Returns the gas coin ID if valid, otherwise returns an error
+//
+// Parameters:
+//   - ctx: Context for RPC calls
+//   - flagValue: The value from the --signer-gas-id flag
+//   - signerAddress: The signer address to verify ownership against
+//   - rpcURL: RPC URL for blockchain queries
+//   - envVars: Optional environment variable names to check (e.g., "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+//
+// Returns the gas coin ID to use for the transaction.
+func ResolveGasCoinId(ctx context.Context, flagValue string, signerAddress string, rpcURL string, envVars ...string) (string, error) {
+	// 1. Read gas coin ID from flag/env
+	var envValues []string
+	for _, envVar := range envVars {
+		if val := os.Getenv(envVar); val != "" {
+			envValues = append(envValues, val)
+		}
+	}
+	gasID := FirstNonEmpty(append([]string{flagValue}, envValues...)...)
+	if gasID == "" {
+		return "", fmt.Errorf("missing gas coin id (set --signer-gas-id or env vars: %v)", envVars)
+	}
+
+	// 2. Verify ownership by querying the blockchain
+
+	// Get RPC URL if not already set
+	if rpcURL == "" {
+		rpcURL = os.Getenv("REBASE_RPC")
+		if rpcURL == "" {
+			rpcURL = os.Getenv("DCS_RPC")
+		}
+		if rpcURL == "" {
+			rpcURL = "https://api.testnet.iota.cafe:443"
+		}
+	}
+
+	// Dial RPC
+	w, err := rebased.Dial(rpcURL)
+	if err != nil {
+		return "", fmt.Errorf("rpc dial failed: %w", err)
+	}
+
+	obj, err := w.GetObject(ctx, gasID, suitypes.SuiObjectDataOptions{ShowOwner: true})
+	if err != nil {
+		return "", fmt.Errorf("failed to get gas coin object: %w", err)
+	}
+	if obj == nil || obj.Data == nil {
+		return "", fmt.Errorf("gas coin object %s not found", gasID)
+	}
+	if obj.Error != nil {
+		return "", fmt.Errorf("rpc getObject error: %+v", obj.Error)
+	}
+
+	// Extract owner address from the object
+	ownerAddr, err := extractOwnerAddress(obj.Data)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract owner address from gas coin: %w", err)
+	}
+
+	// 3. Compare owner with signer address (case-insensitive)
+	if !strings.EqualFold(ownerAddr, signerAddress) {
+		return "", fmt.Errorf(
+			"gas coin %s belongs to address %s, but signer address is %s",
+			gasID, ownerAddr, signerAddress,
+		)
+	}
+
+	return gasID, nil
+}
+
+// extractOwnerAddress extracts the owner address from SuiObjectData.
+// Owner can be AddressOwner, ObjectOwner, Shared, or Immutable.
+// For gas coins, it should be AddressOwner.
+func extractOwnerAddress(data *suitypes.SuiObjectData) (string, error) {
+	if data == nil {
+		return "", errors.New("object data is nil")
+	}
+	if data.Owner == nil {
+		return "", errors.New("owner is nil")
+	}
+
+	// Marshal to JSON to access the structure
+	ownerJSON, err := json.Marshal(data.Owner)
+	if err != nil {
+		return "", fmt.Errorf("marshal owner: %w", err)
+	}
+
+	// Try to unmarshal as a map to access fields
+	var ownerMap map[string]interface{}
+	if err := json.Unmarshal(ownerJSON, &ownerMap); err != nil {
+		return "", fmt.Errorf("unmarshal owner: %w", err)
+	}
+
+	// Check for AddressOwner
+	if addrOwner, ok := ownerMap["AddressOwner"]; ok {
+		if addr, ok := addrOwner.(string); ok {
+			return addr, nil
+		}
+	}
+
+	// Check for ObjectOwner
+	if objOwner, ok := ownerMap["ObjectOwner"]; ok {
+		if addr, ok := objOwner.(string); ok {
+			return addr, nil
+		}
+	}
+
+	// Shared or Immutable objects cannot be used as gas coins
+	if _, ok := ownerMap["Shared"]; ok {
+		return "", errors.New("gas coin cannot be a shared object")
+	}
+	if _, ok := ownerMap["Immutable"]; ok {
+		return "", errors.New("gas coin cannot be an immutable object")
+	}
+
+	return "", errors.New("unknown owner type or owner structure")
 }

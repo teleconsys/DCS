@@ -372,25 +372,52 @@ func extractCidIdFromResponse(rsp *suitypes.SuiTransactionBlockResponse) (string
 		return "", fmt.Errorf("no object changes found in transaction response")
 	}
 
-	// Marshal to JSON and extract created object IDs
+	// Search in the ObjectChanges array for objects "created" with type CID and owner Shared
+	for _, change := range rsp.ObjectChanges {
+		// Marshal to access the fields
+		changeJSON, err := json.Marshal(change)
+		if err != nil {
+			continue
+		}
+
+		var changeMap map[string]interface{}
+		if err := json.Unmarshal(changeJSON, &changeMap); err != nil {
+			continue
+		}
+
+		// Search for the "Data": {"created": {...}} structure
+		if data, ok := changeMap["Data"].(map[string]interface{}); ok {
+			if created, ok := data["created"].(map[string]interface{}); ok {
+				// Verify that it is a CID object
+				if objectType, ok := created["objectType"].(string); ok {
+					if strings.Contains(objectType, "CID") {
+						// Verify that it has Shared owner (indicating it was shared)
+						if owner, ok := created["owner"].(map[string]interface{}); ok {
+							if shared, ok := owner["Shared"].(map[string]interface{}); ok && shared != nil {
+								if objectId, ok := created["objectId"].(string); ok {
+									return objectId, nil
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: search with regex in the marshaled JSON
 	b, err := json.Marshal(rsp.ObjectChanges)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal object changes: %w", err)
 	}
 
-	// Look for all object IDs in the JSON
-	re := regexp.MustCompile(`"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
-	matches := re.FindAllStringSubmatch(string(b), -1)
-
-	if len(matches) == 0 {
-		return "", fmt.Errorf("no object ID found in transaction response")
+	// Pattern to search for "created" with objectId and type containing CID, with Shared owner
+	re := regexp.MustCompile(`"created"\s*:\s*\{[^}]*"objectType"\s*:\s*"[^"]*CID[^"]*"[^}]*"owner"\s*:\s*\{[^}]*"Shared"[^}]*\}[^}]*"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
+	matches := re.FindStringSubmatch(string(b))
+	if len(matches) > 1 {
+		return matches[1], nil
 	}
 
-	// Return the objectId from the LAST match (last index in the array)
-	lastMatch := matches[len(matches)-1]
-	if len(lastMatch) > 1 {
-		return lastMatch[1], nil
-	}
-
-	return "", fmt.Errorf("no CID object ID found in transaction response")
+	// If no created CID object with Shared owner is found, the user was not whitelisted
+	return "", fmt.Errorf("no CID object found in transaction response: user may not be whitelisted")
 }

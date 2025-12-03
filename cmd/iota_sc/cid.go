@@ -98,7 +98,7 @@ Examples:
 			cmd.Printf("Creating a new gas coin for the CID creation...\n")
 			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, int64(params.Amount))
 			if err != nil {
-				cmd.PrintErrf("Failed to create a new gas coin: %v\n", err)
+				cmd.PrintErrf("❌ Failed to create a new gas coin: %v\n", err)
 				return err
 			}
 			cmd.Printf("✅ New gas coin created successfully, new coin ID: %s\n", cidCoinId)
@@ -107,7 +107,7 @@ Examples:
 			cmd.Printf("Creating CID object...\n")
 			_, cidId, err := cid_sc.CreateCID(cmd.Context(), params, cidCoinId)
 			if err != nil {
-				cmd.PrintErrf("Failed to create CID object: %v\n", err)
+				cmd.PrintErrf("❌ Failed to create CID object: %v\n", err)
 				return err
 			}
 

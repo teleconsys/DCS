@@ -106,8 +106,8 @@ func GetCIDFields(ctx context.Context, w *rebased.Wrapper, cidObjectID string) (
 	return fields, nil
 }
 
-// GetCIDObject fetches a CID object and returns only the cid_str using RPC wrapper
-func GetCIDObject(ctx context.Context, cidObjectID, rpcURL string) (string, error) {
+// GetCidStringFromObject fetches a CID object and returns only the cid_str using RPC wrapper
+func GetCIDStringFromObject(ctx context.Context, cidObjectID, rpcURL string) (string, error) {
 	// Dial RPC
 	w, err := rebased.Dial(rpcURL)
 	if err != nil {
@@ -124,25 +124,22 @@ func GetCIDObject(ctx context.Context, cidObjectID, rpcURL string) (string, erro
 		return "", fmt.Errorf("cid_str field not found in CID object")
 	}
 
-	if str, ok := cidStr.(string); ok {
-		return str, nil
-	}
-
-	return "", fmt.Errorf("cid_str field is not a string")
+	return convertToString(cidStr)
 }
 
 // GetCIDIdFromList searches for a particular CID (not its ID) in CIDlist and returns the object ID
 func GetCIDIdFromList(ctx context.Context, cidStr, rpcURL string) (string, error) {
 	// Get the CID list
+
 	cidList, err := GetCIDList(ctx, rpcURL)
 	if err != nil {
 		return "", err
 	}
-
+	
 	// Search through each CID object ID in the list
 	for _, cidObjectID := range cidList {
 		// Get the CID string from the CID object
-		storedCidStr, err := GetCIDObject(ctx, cidObjectID, rpcURL)
+		storedCidStr, err := GetCIDStringFromObject(ctx, cidObjectID, rpcURL)
 		if err != nil {
 			continue // Skip if we can't fetch this CID object
 		}
@@ -214,4 +211,39 @@ func extractFieldsFromContent(jsonBytes []byte) (map[string]any, string, bool) {
 	}
 
 	return nil, "", false
+}
+
+// convertToString converts a value that may be a string or byte array (vector<u8>) to a string.
+// It handles string, []byte, and []interface{} (JSON array of numbers) types.
+func convertToString(value interface{}) (string, error) {
+	// Handle string case
+	if str, ok := value.(string); ok {
+		return str, nil
+	}
+
+	// Handle vector<u8> case (byte array from JSON)
+	if byteSlice, ok := value.([]interface{}); ok {
+		bytes := make([]byte, len(byteSlice))
+		for i, v := range byteSlice {
+			// JSON numbers are typically float64, but we need uint8
+			switch val := v.(type) {
+			case float64:
+				bytes[i] = byte(val)
+			case uint8:
+				bytes[i] = val
+			case int:
+				bytes[i] = byte(val)
+			default:
+				return "", fmt.Errorf("byte array contains non-numeric value at index %d: %T", i, v)
+			}
+		}
+		return string(bytes), nil
+	}
+
+	// Handle []byte case directly
+	if bytes, ok := value.([]byte); ok {
+		return string(bytes), nil
+	}
+
+	return "", fmt.Errorf("value is neither a string nor a byte array (type: %T)", value)
 }

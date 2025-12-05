@@ -191,7 +191,7 @@ go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timesta
 #### 3.4.2. Remove CID
 
 ```bash
-go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+go run main.go iota_sc cid remove [objectId] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -200,8 +200,7 @@ go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--signer-a
 
 **Options:**
 
-- `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
-- `[objectId|cid]`: CID object ID or CID string
+- `[objectId]`: CID object ID (0x...) (required)
 - `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
 - `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
@@ -209,7 +208,7 @@ go run main.go iota_sc cid remove --cid-type <id|cid> [objectId|cid] [--signer-a
 #### 3.4.3. Check if CID is in List
 
 ```bash
-go run main.go iota_sc cid is-in-list --cid-type <id|cid> [objectId|cid]
+go run main.go iota_sc cid is-in-list [objectId]
 ```
 
 **Description:**
@@ -218,13 +217,12 @@ go run main.go iota_sc cid is-in-list --cid-type <id|cid> [objectId|cid]
 
 **Options:**
 
-- `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
-- `[objectId|cid]`: CID object ID or CID string
+- `[objectId]`: CID object ID (0x...) (required)
 
 #### 3.4.4. Transition to Next Epoch
 
 ```bash
-go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--signer-private-key <key>]
+go run main.go iota_sc cid next-epoch [objectId] [--signer-private-key <key>] [--signer-address <address>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -233,8 +231,7 @@ go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--sign
 
 **Options:**
 
-- `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
-- `[objectId|cid]`: CID object ID or CID string
+- `[objectId]`: CID object ID (0x...) (required)
 - `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
 - `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
@@ -242,7 +239,7 @@ go run main.go iota_sc cid next-epoch --cid-type <id|cid> [objectId|cid] [--sign
 #### 3.4.5. Add Funds to CID
 
 ```bash
-go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-id <coin-id> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+go run main.go iota_sc cid add-funds [objectId] --coin-id <coin-id> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -251,8 +248,7 @@ go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-i
 
 **Options:**
 
-- `--cid-type <id|cid>`: Type of cid - 'id' for object ID, 'cid' for CID string (required)
-- `[objectId|cid]`: CID object ID or CID string
+- `[objectId]`: CID object ID (0x...) (required)
 - `--coin-id <coin-id>`: Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
 - `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
 - `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
@@ -263,7 +259,7 @@ go run main.go iota_sc cid add-funds --cid-type <id|cid> [objectId|cid] --coin-i
 #### 3.5.1. Submit Offer
 
 ```bash
-go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+go run main.go iota_sc submit_offer --cid <cid> --amount <amount> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -272,9 +268,8 @@ go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id
 
 **Options:**
 
-- `--cid <cid>`: CID (object id 0x... or CID string) (required)
+- `--cid <cid>`: CID object id (0x...) (required)
 - `--amount <amount>`: Offer amount (IOTA nanos) (required)
-- `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
@@ -283,7 +278,7 @@ go run main.go iota_sc submit_offer --cid <cid> --amount <amount> --cid-type <id
 #### 3.5.2. Approve Offer
 
 ```bash
-go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|cid> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+go run main.go iota_sc approve_offer --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -292,9 +287,8 @@ go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|ci
 
 **Options:**
 
-- `--cid <cid>`: CID (object id 0x... or CID string) (required)
+- `--cid <cid>`: CID object id (0x...) (required)
 - `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
-- `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
@@ -303,7 +297,7 @@ go run main.go iota_sc approve_offer --cid <cid> --idx <index> --cid-type <id|ci
 #### 3.5.3. Honor Offer
 
 ```bash
-go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -312,9 +306,8 @@ go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--cid-type <id|cid
 
 **Options:**
 
-- `--cid <cid>`: CID (object id 0x... or CID string) (required)
+- `--cid <cid>`: CID object id (0x...) (required)
 - `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
-- `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
@@ -344,7 +337,7 @@ go run main.go iota_sc list-open-offers [--graphql-endpoint <url>] [--cidlist-id
 #### 3.5.5. Withdraw
 
 ```bash
-go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+go run main.go iota_sc withdraw --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
 ```
 
 **Description:**
@@ -353,9 +346,8 @@ go run main.go iota_sc withdraw --cid <cid> --idx <index> [--cid-type <id|cid>] 
 
 **Options:**
 
-- `--cid <cid>`: CID (object id 0x... or CID string) (required)
+- `--cid <cid>`: CID object id (0x...) (required)
 - `--idx <index>`: Payment index to withdraw (0-based) (required)
-- `--cid-type <id|cid>`: Interpret --cid as 'id' or 'cid' (default: 'id')
 - `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted, you will be prompted
 - `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
@@ -384,7 +376,7 @@ iota client object <object-id> [--json]
 **Example:**
 
 ```bash
-iota client object 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --json
+iota client object 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --json
 ```
 
 ### 4.2. Gas
@@ -523,7 +515,7 @@ iota client pay-iota --input-coins 0x55ed45ebd47a7c315856871b190e35b1457852862fa
 
 ## 5. Main Test Scenario
 
-This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
+This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
 
 - during the first 10 minutes of each epoch, an offer can be submitted by the user
 - after an offer has been approved, the user should honor it during the succeeding epoch (waiting 10 minutes before the epoch transition could be performed)
@@ -537,7 +529,7 @@ go run main.go iota_sc cid create QmaQXHJTDFKkcgKaMBRLpG9pobg2a5ph44kF5Z8u2UU2iG
 ### 5.2. Submit Offer (provider)
 
 ```bash
-go run main.go iota_sc submit_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --amount 100000 --cid-type id
+go run main.go iota_sc submit_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --amount 100000
 ```
 
 **Notes:**
@@ -558,7 +550,7 @@ go run main.go iota_sc list-open-offers
 ### 5.4. Approve Offer (user)
 
 ```bash
-go run main.go iota_sc approve_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id --idx 0
+go run main.go iota_sc approve_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
 ```
 
 **Notes:**
@@ -569,7 +561,7 @@ go run main.go iota_sc approve_offer --cid 0xc02992abf0bbe7560474981f5202c510600
 ### 5.5. Transition to Next Epoch (user)
 
 ```bash
-go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id
+go run main.go iota_sc cid next-epoch 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0
 ```
 
 **Notes:**
@@ -581,7 +573,7 @@ go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d
 ### 5.6. Honor Offer (user)
 
 ```bash
-go run main.go iota_sc honor_offer --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --idx 0
+go run main.go iota_sc honor_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
 ```
 
 **Notes:**
@@ -592,7 +584,7 @@ go run main.go iota_sc honor_offer --cid 0xc02992abf0bbe7560474981f5202c51060007
 ### 5.7. Transition to Next Epoch (Again) (user)
 
 ```bash
-go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id
+go run main.go iota_sc cid next-epoch 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0
 ```
 
 **Notes:**
@@ -603,7 +595,7 @@ go run main.go iota_sc cid next-epoch 0xc02992abf0bbe7560474981f5202c5106000703d
 ### 5.8. Withdraw (provider)
 
 ```bash
-go run main.go iota_sc withdraw --cid 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --cid-type id --idx 0
+go run main.go iota_sc withdraw --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
 ```
 
 **Notes:**

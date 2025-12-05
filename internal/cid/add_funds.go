@@ -30,48 +30,24 @@ type AddFundsParams struct {
 func LoadAddFundsParams(cmd *cobra.Command, args []string) (AddFundsParams, error) {
 	var p AddFundsParams
 
-	// Get CID from flag or args
-	var cidArg string
-	if len(args) > 0 {
-		cidArg = args[0]
-	} else {
-		return p, fmt.Errorf("provide CID ID or CID string as argument or --cid flag")
+	// Get CID from args
+	if len(args) == 0 {
+		return p, fmt.Errorf("provide CID object ID as argument")
 	}
 
-	cidType, err := cmd.Flags().GetString("cid-type")
-	if err != nil {
-		return p, err
-	}
+	// Use the argument directly as CID object ID
+	p.CIDId = args[0]
 
-	// Validate cidType
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("cid-type must be either 'id' or 'cid', got: %s", cidType)
-	}
-
-	// Set the cidId based on type
-	if cidType == "id" {
-		p.CIDId = cidArg
-	} else {
-		cidStr := cidArg
-
-		// Get RPC URL first (needed for GetCIDIdFromList)
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
+	// Get RPC URL
+	p.RPCURL = viper.GetString("rpc")
+	if p.RPCURL == "" {
+		if u := os.Getenv("REBASE_RPC"); u != "" {
+			p.RPCURL = u
+		} else if u := os.Getenv("DCS_RPC"); u != "" {
+			p.RPCURL = u
+		} else {
+			p.RPCURL = "https://api.testnet.iota.cafe:443"
 		}
-
-		// Get the CID object ID from the CIDlist
-		cidId, err := GetCIDIdFromList(cmd.Context(), cidStr, p.RPCURL)
-		if err != nil {
-			return p, fmt.Errorf("failed to find CID object: %w", err)
-		}
-		p.CIDId = cidId
 	}
 
 	// Get coin ID to deposit
@@ -123,20 +99,6 @@ func LoadAddFundsParams(cmd *cobra.Command, args []string) (AddFundsParams, erro
 	}
 	if p.GasBudget == 0 {
 		p.GasBudget = 10_000_000 // default
-	}
-
-	// Get RPC URL if not already set
-	if p.RPCURL == "" {
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
-		}
 	}
 
 	return p, nil

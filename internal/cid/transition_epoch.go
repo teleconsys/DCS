@@ -22,22 +22,11 @@ type TransitionParams struct {
 	UserSignerAddress string
 	UserPrivateKey    string
 	PackageID         string
-	CIDType           string
 }
 
 func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, error) {
 	var p TransitionParams
 
-	cidType, err := cmd.Flags().GetString("cid-type")
-	if err != nil {
-		return p, err
-	}
-
-	// Validate cidType
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("cid-type must be either 'id' or 'cid', got: %s", cidType)
-	}
-	p.CIDType = cidType
 	// Get package ID
 	p.PackageID = viper.GetString("dcs.package_id")
 	if p.PackageID == "" {
@@ -95,29 +84,14 @@ func LoadTransitionParams(cmd *cobra.Command, args []string) (TransitionParams, 
 	return p, nil
 }
 
-func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool, error) {
-
-	CID := cid
-	var err error
-
-	if p.CIDType == "cid" {
-		CID, err = GetCIDIdFromList(ctx, cid, p.RPCURL)
-		if err != nil {
-			return false, fmt.Errorf("failed to get CID ID: %w", err)
-		}
-	}
-
-	if err != nil {
-		return false, fmt.Errorf("failed to get CID ID: %w", err)
-	}
-
+func TransitionEpoch(ctx context.Context, p TransitionParams, cidObjectID string) (bool, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return false, fmt.Errorf("rpc dial failed: %w", err)
 	}
 
 	// Build arguments for create_cid function
-	args := []any{CID, "0x6"}
+	args := []any{cidObjectID, "0x6"}
 	gasPtr := &p.GasID
 
 	// Build unsigned transaction
@@ -172,16 +146,8 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 
 // CheckEpochTransitionAllowed verifies that the current timestamp allows epoch transition.
 // Transition is only allowed after next_epoch_start has passed.
-func CheckEpochTransitionAllowed(ctx context.Context, cidArg, cidType, rpcURL string) error {
-	// Get CID object ID
-	cidObjectID := cidArg
-	if cidType == "cid" {
-		var err error
-		cidObjectID, err = GetCIDIdFromList(ctx, cidArg, rpcURL)
-		if err != nil {
-			return fmt.Errorf("failed to get CID ID: %w", err)
-		}
-	}
+func CheckEpochTransitionAllowed(ctx context.Context, cidObjectID, rpcURL string) error {
+	// Use the argument directly as CID object ID
 
 	// Dial RPC
 	w, err := rebased.Dial(rpcURL)

@@ -65,8 +65,7 @@ func NewApproveOfferCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid", "", "CID (object id 0x... or CID string)")
-	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
+	cmd.Flags().String("cid", "", "CID object id (0x...)")
 	cmd.Flags().Uint64Var(&indexFlag, "idx", 0, "Offer index in next_epoch_offers to approve (0-based)")
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Verbose debug")
 

@@ -34,35 +34,18 @@ func LoadApproveOfferParams(ctx context.Context, cmd *cobra.Command, args []stri
 	// Get CID from flag
 	cidArg, _ := cmd.Flags().GetString("cid")
 	if cidArg == "" {
-		return p, fmt.Errorf("--cid is required (object id or CID string)")
+		return p, fmt.Errorf("--cid is required (object id 0x...)")
 	}
 
-	// Get CID type
-	cidType, _ := cmd.Flags().GetString("cid-type")
-	if cidType == "" {
-		cidType = "id" // default
-	}
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("--cid-type must be 'id' or 'cid'")
-	}
+	// Use the flag value directly as CID object ID
+	p.CIDObjectID = cidArg
 
-	// Get RPC URL (needed for CID resolution)
+	// Get RPC URL
 	rpc := os.Getenv("REBASE_RPC")
 	if rpc == "" {
 		rpc = "https://api.testnet.iota.cafe:443"
 	}
 	p.RPCURL = rpc
-
-	// Resolve CID to object ID if needed
-	cidObjectID := cidArg
-	if cidType == "cid" {
-		id, err := cidlib.GetCIDIdFromList(ctx, cidArg, rpc)
-		if err != nil {
-			return p, err
-		}
-		cidObjectID = id
-	}
-	p.CIDObjectID = cidObjectID
 
 	// Get index from flag
 	idx, _ := cmd.Flags().GetUint64("idx")

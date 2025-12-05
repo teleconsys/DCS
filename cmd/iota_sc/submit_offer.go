@@ -57,8 +57,7 @@ func NewSubmitOfferCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid", "", "CID (object id 0x... or CID string)")
-	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
+	cmd.Flags().String("cid", "", "CID object id (0x...)")
 	cmd.Flags().Uint64("amount", 0, "Offer amount (IOTA nanos)")
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Verbose debug (preflight + postflight)")
 

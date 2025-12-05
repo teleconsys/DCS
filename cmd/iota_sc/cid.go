@@ -147,7 +147,7 @@ Remove a CID
 */
 func removeCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "remove --cid-type <objectId|cid> [objectId|cid]",
+		Use:   "remove [objectId]",
 		Short: "Remove a CID listed in the smart contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -170,12 +170,10 @@ func removeCidCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
 	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
 	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
-	cmd.MarkFlagRequired("cid-type")
 	return cmd
 }
 
@@ -184,7 +182,7 @@ Check if a CID is listed in the smart contract
 */
 func isInListCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "is-in-list --cid-type <objectId|cid> [objectId|cid]",
+		Use:   "is-in-list [objectId]",
 		Short: "Check if a CID ID is listed in the smart contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -211,15 +209,12 @@ func isInListCidCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
-	cmd.MarkFlagRequired("cid-type")
-
 	return cmd
 }
 
 func transitionEpochCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "next-epoch --cid-type <objectId|cid> [objectId|cid]",
+		Use:   "next-epoch [objectId]",
 		Short: "Transition to the next epoch",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -232,8 +227,7 @@ func transitionEpochCmd() *cobra.Command {
 			}
 
 			// Check if epoch transition is allowed (only after current_epoch_end)
-			cidType, _ := cmd.Flags().GetString("cid-type")
-			if err := cid_sc.CheckEpochTransitionAllowed(cmd.Context(), args[0], cidType, params.RPCURL); err != nil {
+			if err := cid_sc.CheckEpochTransitionAllowed(cmd.Context(), args[0], params.RPCURL); err != nil {
 				cmd.Printf("⚠️  Warning: %v\n", err)
 				return nil
 			}
@@ -249,12 +243,10 @@ func transitionEpochCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid-type", "", "type of cid (id or cid)")
 	cmd.Flags().String("signer-private-key", "", "Private key for signing (overrides ACTIVE_PRIVATE_KEY env var)")
 	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
-	cmd.MarkFlagRequired("cid-type")
 	return cmd
 }
 
@@ -263,7 +255,7 @@ Add funds to a CID
 */
 func addFundsCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "add-funds --cid-type <objectId|cid> [objectId|cid]",
+		Use:     "add-funds [objectId]",
 		Aliases: []string{"add_funds"},
 		Short:   "Deposit IOTA coins into a CID",
 		Args:    cobra.MaximumNArgs(1),
@@ -301,13 +293,11 @@ func addFundsCidCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
 	cmd.Flags().String("coin-id", "", "Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed.")
 	cmd.Flags().String("signer-address", "", "Signer address (0x...) overrides env")
 	cmd.Flags().String("signer-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID to pay for the transaction (0x...) overrides env")
 
-	cmd.MarkFlagRequired("cid-type")
 	cmd.MarkFlagRequired("coin-id")
 
 	return cmd

@@ -2,7 +2,6 @@ package iota_sc
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -240,13 +239,12 @@ func transitionEpochCmd() *cobra.Command {
 			}
 
 			_, err = cid_sc.TransitionEpoch(cmd.Context(), params, args[0])
-
 			if err != nil {
 				cmd.PrintErrf("❌ Failed to transition epoch: %v\n", err)
 				return err
 			}
 
-			fmt.Printf("✅ Epoch transition successful\n")
+			cmd.Printf("✅ Epoch transition successful\n")
 			return nil
 		},
 	}

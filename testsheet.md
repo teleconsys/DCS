@@ -384,7 +384,7 @@ iota client object <object-id> [--json]
 **Example:**
 
 ```bash
-iota client object 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b --json
+iota client object 0xc02992abf0bbe7560474981f5202c5106000703d064ae59fac58baf2c71ad434 --json
 ```
 
 ### 4.2. Gas

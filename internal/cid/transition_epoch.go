@@ -152,9 +152,18 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 	}
 	reqType := suitypes.ExecuteTransactionRequestType("WaitForLocalExecution")
 
-	_, err = w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
+	resp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
 		return false, fmt.Errorf("execute: %w", err)
+	}
+
+	// Check transaction status and extract error details if failed
+	ok, reason := txStatusOK(resp)
+	if !ok {
+		if reason != "" {
+			return false, fmt.Errorf("transition_epoch failed: %s", reason)
+		}
+		return false, fmt.Errorf("transition_epoch failed: transaction execution returned failure status")
 	}
 
 	return true, nil
@@ -162,7 +171,7 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cid string) (bool,
 }
 
 // CheckEpochTransitionAllowed verifies that the current timestamp allows epoch transition.
-// Transition is only allowed after current_epoch_end has passed.
+// Transition is only allowed after next_epoch_start has passed.
 func CheckEpochTransitionAllowed(ctx context.Context, cidArg, cidType, rpcURL string) error {
 	// Get CID object ID
 	cidObjectID := cidArg
@@ -186,18 +195,18 @@ func CheckEpochTransitionAllowed(ctx context.Context, cidArg, cidType, rpcURL st
 		return fmt.Errorf("failed to get CID fields: %w", err)
 	}
 
-	// Extract current_epoch_end
-	currentEpochEndRaw := fields["current_epoch_end"]
+	// Extract next_epoch_start
+	currentEpochEndRaw := fields["next_epoch_start"]
 	currentEpochEnd := asI64FromFields(currentEpochEndRaw)
 
 	// Get current timestamp in milliseconds
 	nowMs := time.Now().UnixMilli()
 
-	// Check if transition is allowed (only after current_epoch_end)
+	// Check if transition is allowed (only after next_epoch_start)
 	if nowMs < currentEpochEnd {
 		remainingMs := currentEpochEnd - nowMs
 		remainingMinutes := remainingMs / 60_000
-		return fmt.Errorf("epoch transition not allowed yet. Current epoch ends in %d minutes (at timestamp %d, current: %d). Transition is only effective after the actual end of the current epoch", remainingMinutes, currentEpochEnd, nowMs)
+		return fmt.Errorf("epoch transition not allowed yet. Next epoch starts in %d minutes (at timestamp %d, current: %d). Transition is only effective after the actual start of the next epoch", remainingMinutes, currentEpochEnd, nowMs)
 	}
 
 	return nil

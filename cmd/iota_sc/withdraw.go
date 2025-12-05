@@ -2,7 +2,7 @@ package iota_sc
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/teleconsys/DCS/internal/cid"
+	"github.com/teleconsys/DCS/internal/offers"
 )
 
 func NewWithdrawCmd() *cobra.Command {
@@ -18,12 +18,12 @@ func NewWithdrawCmd() *cobra.Command {
 		Use:   "withdraw",
 		Short: "Withdraw IOTA from a fulfilled offer",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			p, err := cid.LoadWithdrawParams(cmd.Context(), cmd, args)
+			p, err := offers.LoadWithdrawParams(cmd.Context(), cmd, args)
 			if err != nil {
 				return err
 			}
 
-			resp, err := cid.Withdraw(cmd.Context(), p)
+			resp, err := offers.Withdraw(cmd.Context(), p)
 			if err != nil {
 				return err
 			}
@@ -38,8 +38,7 @@ func NewWithdrawCmd() *cobra.Command {
 	}
 
 	// Required / core flags
-	cmd.Flags().String("cid", "", "CID (object id 0x... or CID string)")
-	cmd.Flags().String("cid-type", "id", "interpret --cid as 'id' or 'cid'")
+	cmd.Flags().String("cid", "", "CID object id (0x...)")
 	cmd.Flags().Uint64Var(&indexFlag, "idx", 0, "Payment index to withdraw (0-based)")
 	cmd.Flags().BoolVar(&debugFlag, "debug", false, "Verbose debug")
 

@@ -95,7 +95,7 @@ Examples:
 
 			// Split coin first to get the coin ID for CID creation
 			cmd.Printf("Creating a new gas coin for the CID creation...\n")
-			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params, params.GasID, int64(params.Amount))
+			cidCoinId, err := cid_sc.CreateGasCoin(cmd.Context(), params.GasCoinConfig(), params.Amount)
 			if err != nil {
 				cmd.PrintErrf("❌ Failed to create a new gas coin: %v\n", err)
 				return err
@@ -267,7 +267,17 @@ func addFundsCidCmd() *cobra.Command {
 				return err
 			}
 
-			// Add funds using new wrapper
+			// Create a fresh gas coin with the requested amount
+			cmd.Printf("Creating a gas coin with amount %d...\n", params.Amount)
+			coinID, err := cid_sc.CreateGasCoin(cmd.Context(), params.GasCoinConfig(), params.Amount)
+			if err != nil {
+				cmd.PrintErrf("Failed to create gas coin: %v\n", err)
+				return err
+			}
+			cmd.Printf("✅ Gas coin created: %s\n", coinID)
+			params.CoinID = coinID
+
+			// Add funds using new wrapper with freshly minted coin
 			respBytes, err := cid_sc.AddFunds(cmd.Context(), params)
 			if err != nil {
 				cmd.PrintErrf("Failed to add funds: %v\n", err)
@@ -293,12 +303,12 @@ func addFundsCidCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("coin-id", "", "Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed.")
+	cmd.Flags().Uint64("amount", 0, "Amount to deposit into the CID (IOTA nanos)")
 	cmd.Flags().String("signer-address", "", "Signer address (0x...) overrides env")
 	cmd.Flags().String("signer-private-key", "", "Private key for signing, if omitted you will be prompted to insert it")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID to pay for the transaction (0x...) overrides env")
 
-	cmd.MarkFlagRequired("coin-id")
+	cmd.MarkFlagRequired("amount")
 
 	return cmd
 }

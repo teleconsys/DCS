@@ -239,7 +239,7 @@ go run main.go iota_sc cid next-epoch [objectId] [--signer-private-key <key>] [-
 #### 3.4.5. Add Funds to CID
 
 ```bash
-go run main.go iota_sc cid add-funds [objectId] --coin-id <coin-id> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+go run main.go iota_sc cid add-funds [objectId] --amount <amount> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
 ```
 
 **Description:**
@@ -249,7 +249,7 @@ go run main.go iota_sc cid add-funds [objectId] --coin-id <coin-id> [--signer-ad
 **Options:**
 
 - `[objectId]`: CID object ID (0x...) (required)
-- `--coin-id <coin-id>`: Gas coin object ID to deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
+- `--amount <amount>`: Amount of money to transfer to the CID object. A new coin object id will be created and deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
 - `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
 - `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
 - `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)

@@ -19,6 +19,7 @@ import (
 type AddFundsParams struct {
 	CIDId             string
 	CoinID            string
+	Amount            uint64
 	PackageID         string
 	GasID             string
 	GasBudget         uint64
@@ -50,14 +51,12 @@ func LoadAddFundsParams(cmd *cobra.Command, args []string) (AddFundsParams, erro
 		}
 	}
 
-	// Get coin ID to deposit
-	if coinIDFlag, _ := cmd.Flags().GetString("coin-id"); coinIDFlag != "" {
-		p.CoinID = coinIDFlag
-	} else if coinIDEnv := os.Getenv("COIN_ID"); coinIDEnv != "" {
-		p.CoinID = coinIDEnv
-	} else {
-		return p, fmt.Errorf("set COIN_ID env var or pass --coin-id (0x...)")
+	// Get amount to deposit
+	amountFlag, _ := cmd.Flags().GetUint64("amount")
+	if amountFlag == 0 {
+		return p, fmt.Errorf("amount must be greater than zero")
 	}
+	p.Amount = amountFlag
 
 	// Read private key
 	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
@@ -104,7 +103,21 @@ func LoadAddFundsParams(cmd *cobra.Command, args []string) (AddFundsParams, erro
 	return p, nil
 }
 
+func (p AddFundsParams) GasCoinConfig() GasCoinParams {
+	return GasCoinParams{
+		RPCURL:            p.RPCURL,
+		GasID:             p.GasID,
+		GasBudget:         p.GasBudget,
+		UserSignerAddress: p.UserSignerAddress,
+		UserPrivateKey:    p.UserPrivateKey,
+	}
+}
+
 func AddFunds(ctx context.Context, p AddFundsParams) ([]byte, error) {
+	if p.CoinID == "" {
+		return nil, fmt.Errorf("coinID is required to deposit funds")
+	}
+
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return nil, fmt.Errorf("rpc dial failed: %w", err)
@@ -150,6 +163,12 @@ func AddFunds(ctx context.Context, p AddFundsParams) ([]byte, error) {
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
 		return nil, fmt.Errorf("execute: %w", err)
+	}
+
+	// Validate transaction status
+	ok, reason := txStatusOK(rsp)
+	if !ok {
+		return nil, fmt.Errorf("deposit_funds transaction failed: %s", reason)
 	}
 
 	b, _ := json.Marshal(rsp)

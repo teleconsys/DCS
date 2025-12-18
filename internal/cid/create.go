@@ -34,6 +34,24 @@ type CreateParams struct {
 	UserPrivateKey    string
 }
 
+type GasCoinParams struct {
+	RPCURL            string
+	GasID             string
+	GasBudget         uint64
+	UserSignerAddress string
+	UserPrivateKey    string
+}
+
+func (p CreateParams) GasCoinConfig() GasCoinParams {
+	return GasCoinParams{
+		RPCURL:            p.RPCURL,
+		GasID:             p.GasID,
+		GasBudget:         p.GasBudget,
+		UserSignerAddress: p.UserSignerAddress,
+		UserPrivateKey:    p.UserPrivateKey,
+	}
+}
+
 func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	var p CreateParams
 
@@ -149,8 +167,8 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	return p, nil
 }
 
-// CreateGasCoin creates a new gas coin for the CID creation with payIota function
-func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
+// CreateGasCoin creates a new gas coin with payIota function
+func CreateGasCoin(ctx context.Context, p GasCoinParams, amount uint64) (string, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return "", fmt.Errorf("error RPC dial failed: %w", err)
@@ -158,11 +176,11 @@ func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount in
 
 	// Build unsigned transaction
 	txb, err := w.PayIotaUnsigned(ctx,
-		p.UserSignerAddress,                 // signer
-		[]string{p.GasID},                   // input_coins
-		[]string{p.UserSignerAddress},       // recipients (pay to yourself)
+		p.UserSignerAddress,           // signer
+		[]string{p.GasID},             // input_coins
+		[]string{p.UserSignerAddress}, // recipients (pay to yourself)
 		[]string{fmt.Sprintf("%d", amount)}, // amounts
-		p.GasBudget,                         // gas_budget
+		p.GasBudget, // gas_budget
 	)
 
 	if err != nil {

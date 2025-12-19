@@ -1,0 +1,604 @@
+# Testsheet DCS
+
+## 1. Introduction
+
+This document provides a comprehensive checklist of CLI commands and their available options for testing the DCS (DeCentralized Storage). The document serves as a general reference for all CLI commands, with detailed test scenarios demonstrating their usage.
+
+## 2. Actors
+
+The DCS system involves three main actors, each with distinct roles and responsibilities:
+
+### 2.1. Ground Control (GC)
+
+Admin actor responsible for system-wide management. GC can:
+
+- Add or remove users and providers from the whitelist
+
+**Environment Variables:**
+
+- `GC_PRIVATE_KEY`: Ground Control private key (iotaprivkey1...)
+- `GC_ADDRESS`: Ground Control address (0x...)
+- `GC_WALLET_GAS_ID`: Gas coin object ID for GC operations
+
+### 2.2. User
+
+Actor who wants to store their content in a decentralized manner. Users can:
+
+- Create CID objects for their content
+- Approve provider offers for storage
+- Honor approved offers by providing the content
+- Transition epochs for their CID objects
+- Add funds to CID objects
+- Remove CID objects from the system
+- Check if a CID is listed in the system
+
+**Environment Variables:**
+
+- `ACTIVE_PRIVATE_KEY`: User private key, substitutes the old USER_PRIVATE_KEY (iotaprivkey1...)
+- `ACTIVE_ADDRESS`: User address; if omitted, it is considered USER_ADDRESS instead (0x...)
+- `USER_ADDRESS`: User address when ACTIVE_ADDRESS is not set. Only considered for user operations (0x...)
+- `ACTIVE_GAS_COIN_ID`: Gas coin object ID; if omitted, it is considered USER_GAS_COIN_ID instead (0x...)
+- `USER_GAS_COIN_ID`: Gas coin object ID when ACTIVE_GAS_COIN_ID is not set. Only considered for user operations (0x...)
+
+### 2.3. Provider
+
+Storage service provider actor who offers storage capacity for CIDs. Providers can:
+
+- Submit storage offers for CIDs
+- Withdraw payments after offers are honored and approved
+- Monitor open offer windows
+
+**Environment Variables:**
+
+- `ACTIVE_PRIVATE_KEY`: Provider private key, substitutes the old PROVIDER_PRIVATE_KEY (iotaprivkey1...)
+- `ACTIVE_ADDRESS`: Provider address; if omitted, it is considered PROVIDER_ADDRESS instead (0x...)
+- `PROVIDER_ADDRESS`: Provider address when ACTIVE_ADDRESS is not set. Only considered for provider operations (0x...)
+- `ACTIVE_GAS_COIN_ID`: Gas coin object ID; if omitted, it is considered PROVIDER_GAS_COIN_ID instead (0x...)
+- `PROVIDER_GAS_COIN_ID`: Gas coin object ID when ACTIVE_GAS_COIN_ID is not set. Only considered for provider operations (0x...)
+
+## 3. CLI command lists
+
+This section provides a comprehensive list of all available CLI commands with their options and descriptions.
+
+### 3.1. Ping
+
+```bash
+go run main.go iota_sc ping [--timeout <duration>]
+```
+
+**Description:**
+
+- Quick connectivity check against the IOTA network
+- Verifies that the RPC endpoint is accessible
+
+**Options:**
+
+- `--timeout <duration>`: RPC timeout (default: 5s)
+
+### 3.2. Account
+
+#### 3.2.1. Create New Account
+
+```bash
+go run main.go iota_sc account new --alias <name> [--no_faucet] [--faucet-amount <n>]
+```
+
+**Description:**
+
+- Generate an ed25519 keypair and address
+- Optionally fund via faucet from environment variables
+- Saves account information to `./accounts/<alias>.json`
+
+**Options:**
+
+- `--alias <name>`: Account alias (required)
+- `--no_faucet`: Do not call the faucet even if FAUCET_URL is set
+- `--faucet-amount <n>`: Optional amount to request from faucet
+
+**Environment Variables:**
+
+- `FAUCET_URL`: Faucet endpoint URL
+
+### 3.3. Whitelist
+
+#### 3.3.1. Check if Address is in Whitelist
+
+```bash
+go run main.go iota_sc whitelist has [ADDRESS] [--member <address>] [--print-addr] [--id <whitelist-id>]
+```
+
+**Description:**
+
+- Return true if the given ADDRESS is in the whitelist (RPC)
+- **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
+
+**Options:**
+
+- `[ADDRESS]`: Address to check (0x...) - either this or `--member` must be specified
+- `--member, -m <address>`: Address/ID to check (0x...) - either this or `ADDRESS` must be specified
+- `--print-addr`: Print the address if present (instead of true/false)
+- `--id <whitelist-id>`: Whitelist object ID (0x...) to use for this command. Takes priority over `DCS_WHITELIST_ID` env var
+
+**Environment Variables:**
+
+- `DCS_WHITELIST_ID`: Whitelist object ID
+
+#### 3.3.2. Add Address to Whitelist
+
+```bash
+go run main.go iota_sc whitelist add [ADDRESS] [--member <address>] [--package-id <id>] [--signer-gas-id <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
+```
+
+**Description:**
+
+- Add a user/provider ADDRESS to the whitelist (requires signer)
+- **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
+
+**Options:**
+
+- `[ADDRESS]`: Address to add (0x...) - either this or `--member` must be specified
+- `--member, -m <address>`: Address/ID to add (0x...) - either this or `ADDRESS` must be specified
+- `--package-id <id>`: DCS package ID (0x...)
+- `--signer-gas-id <coin-id>`: Gas coin object ID (0x...)
+- `--gas-budget <amount>`: Gas budget (nanos)
+- `--id <whitelist-id>`: Whitelist object ID (0x...) to use for this command. Takes priority over `DCS_WHITELIST_ID` env var
+
+#### 3.3.3. Remove Address from Whitelist
+
+```bash
+go run main.go iota_sc whitelist remove [ADDRESS] [--member <address>] [--package-id <id>] [--signer-gas-id <coin-id>] [--gas-budget <amount>] [--id <whitelist-id>]
+```
+
+**Description:**
+
+- Remove the given ADDRESS from the whitelist (requires signer)
+- **Note:** At least one of `ADDRESS` (positional argument) or `--member` flag must be provided
+
+**Options:**
+
+- `[ADDRESS]`: Address to remove (0x...) - either this or `--member` must be specified
+- `--member, -m <address>`: Address/ID to remove (0x...) - either this or `ADDRESS` must be specified
+- `--package-id <id>`: DCS package ID (0x...)
+- `--signer-gas-id <coin-id>`: Gas coin object ID (0x...)
+- `--gas-budget <amount>`: Gas budget (nanos)
+- `--id <whitelist-id>`: Whitelist object ID (0x...) to use for this command. Takes priority over `DCS_WHITELIST_ID` env var
+
+### 3.4. CID Management
+
+#### 3.4.1. Create CID
+
+```bash
+go run main.go iota_sc cid create --type <path|cid> [CID] --epoch-start <timestamp> --epoch-end <timestamp> [--amount <amount>] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+```
+
+**Description:**
+
+- Create a new CID object in the smart contract
+- Can provide a CID directly or upload a file to IPFS
+- Automatically create a gas coin object and assign it to the created CID object
+
+**Options:**
+
+- `--type <path|cid>`: Type of input - 'path' to upload file, 'cid' for existing CID (required)
+- `[CID]`: CID string (if --type is 'cid') or file path (if --type is 'path')
+- `--epoch-start <timestamp>`: Next epoch start timestamp (required, 0 for default duration)
+- `--epoch-end <timestamp>`: Next epoch end timestamp (required, 0 for default duration)
+- `--amount <amount>`: Amount for the gas coin object associated to the CID object (IOTA nanos, default: 100000)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID. It is used both to pay for the transaction and to create the gas coin object associated to the new CID object (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+
+#### 3.4.2. Remove CID
+
+```bash
+go run main.go iota_sc cid remove [objectId] [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+```
+
+**Description:**
+
+- Remove a CID listed in the smart contract
+
+**Options:**
+
+- `[objectId]`: CID object ID (0x...) (required)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+
+#### 3.4.3. Check if CID is in List
+
+```bash
+go run main.go iota_sc cid is-in-list [objectId]
+```
+
+**Description:**
+
+- Check if a CID ID is listed in the smart contract
+
+**Options:**
+
+- `[objectId]`: CID object ID (0x...) (required)
+
+#### 3.4.4. Transition to Next Epoch
+
+```bash
+go run main.go iota_sc cid next-epoch [objectId] [--signer-private-key <key>] [--signer-address <address>] [--signer-gas-id <coin-id>]
+```
+
+**Description:**
+
+- Transition to the next epoch for a CID object
+
+**Options:**
+
+- `[objectId]`: CID object ID (0x...) (required)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+
+#### 3.4.5. Add Funds to CID
+
+```bash
+go run main.go iota_sc cid add-funds [objectId] --amount <amount> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>]
+```
+
+**Description:**
+
+- Deposit IOTA coins into a CID
+
+**Options:**
+
+- `[objectId]`: CID object ID (0x...) (required)
+- `--amount <amount>`: Amount of money to transfer to the CID object. A new coin object id will be created and deposit into the CID object (0x...). This gas coin object will be entirely consumed and deleted after the transaction is executed. (required)
+- `--signer-private-key <key>`: Private key for signing (overrides ACTIVE_PRIVATE_KEY env var); if omitted you will be prompted to insert it
+- `--signer-address <address>`: Address of the signer (overrides ACTIVE_ADDRESS and USER_ADDRESS env vars)
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars)
+
+### 3.5. Offer Management
+
+#### 3.5.1. Submit Offer
+
+```bash
+go run main.go iota_sc submit_offer --cid <cid> --amount <amount> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+```
+
+**Description:**
+
+- Submit an offer for the next epoch (provider wallet)
+
+**Options:**
+
+- `--cid <cid>`: CID object id (0x...) (required)
+- `--amount <amount>`: Offer amount (IOTA nanos) (required)
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
+- `--debug`: Verbose debug (preflight + postflight)
+
+#### 3.5.2. Approve Offer
+
+```bash
+go run main.go iota_sc approve_offer --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+```
+
+**Description:**
+
+- Approve a provider offer in next_epoch_offers (CID owner)
+
+**Options:**
+
+- `--cid <cid>`: CID object id (0x...) (required)
+- `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
+- `--debug`: Verbose debug
+
+#### 3.5.3. Honor Offer
+
+```bash
+go run main.go iota_sc honor_offer --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+```
+
+**Description:**
+
+- Honor a confirmed offer in the current epoch (CID owner)
+
+**Options:**
+
+- `--cid <cid>`: CID object id (0x...) (required)
+- `--idx <index>`: Offer index in next_epoch_offers to approve (0-based)
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted you will be prompted to insert it
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and USER_ADDRESS env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env vars
+- `--debug`: Verbose debug
+
+#### 3.5.4. List Open Offers
+
+```bash
+go run main.go iota_sc list-open-offers [--graphql-endpoint <url>] [--cidlist-id <id>]
+```
+
+**Description:**
+
+- Print CIDs whose offer window is open now
+- Shows active offers and the time remaining to approve them
+
+**Options:**
+
+- `--graphql-endpoint <url>`: GraphQL endpoint (overrides .env)
+- `--cidlist-id <id>`: CID list object ID (overrides .env)
+
+**Environment Variables:**
+
+- `IOTA_GRAPHQL_ENDPOINT`: GraphQL endpoint (default: `https://graphql.testnet.iota.cafe`)
+- `DCS_CIDLIST_ID`: CID list object ID
+
+#### 3.5.5. Withdraw
+
+```bash
+go run main.go iota_sc withdraw --cid <cid> --idx <index> [--signer-address <address>] [--signer-private-key <key>] [--signer-gas-id <coin-id>] [--debug]
+```
+
+**Description:**
+
+- Withdraw IOTA from a fulfilled offer
+
+**Options:**
+
+- `--cid <cid>`: CID object id (0x...) (required)
+- `--idx <index>`: Payment index to withdraw (0-based) (required)
+- `--signer-private-key <key>`: Signer private key (iotaprivkey1...), overrides ACTIVE_PRIVATE_KEY env var; if omitted, you will be prompted
+- `--signer-address <address>`: Signer address (0x...), overrides ACTIVE_ADDRESS and PROVIDER_ADDRESS env vars
+- `--signer-gas-id <coin-id>`: Gas coin object ID used to pay for the transaction (0x...), overrides ACTIVE_GAS_COIN_ID and PROVIDER_GAS_COIN_ID env vars
+- `--debug`: Verbose debug
+
+## 4. Utils from Iota CLI
+
+Utility commands for inspecting and monitoring the system state using the IOTA client CLI.
+
+### 4.1. Inspect Object
+
+```bash
+iota client object <object-id> [--json]
+```
+
+**Description:**
+
+- Shows all information about an object on the IOTA network
+- With `--json` flag, outputs data in JSON format for easier parsing
+- Useful for inspecting CID objects to see:
+  - `current_epoch_offers` or `prev_epochs...` arrays
+  - State of the flags: `approved`, `honored`, `paid`
+  - Epoch timing information
+  - Other object metadata
+
+**Example:**
+
+```bash
+iota client object 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --json
+```
+
+### 4.2. Gas
+
+```bash
+iota client gas [<address>]
+```
+
+**Description:**
+
+- Check gas balance for an address or the default signer
+- Shows available gas coins that can be used for transactions
+- Useful for verifying that accounts have sufficient funds for operations
+
+**Example:**
+
+```bash
+iota client gas
+iota client gas 0x7593935b40a3fa1a5920999bf531bbfaac6f7dd63c86599962a241c286aa592b
+```
+
+### 4.3. Faucet
+
+```bash
+iota client faucet --address <address>
+```
+
+**Description:**
+
+- Request test tokens from the IOTA testnet faucet
+- Useful for obtaining initial funds for new accounts
+- Funds an address with test IOTA tokens for development and testing purposes
+
+**Options:**
+
+- `--address <address>`: Address to fund (0x...)
+
+**Example:**
+
+```bash
+iota client faucet --address 0x731f57d2f3c5b102e5a4d182c8d4b6c06f0ba3aaf5534e1913e99631163d3edd
+```
+
+### 4.4. Import Key
+
+```bash
+iota keytool import <private-key> ed25519 --alias <name>
+```
+
+**Description:**
+
+- Import a private key into the IOTA client keychain
+- Creates a named alias for the imported key
+- Allows using the key with the `--alias` flag in subsequent commands
+
+**Options:**
+
+- `<private-key>`: Private key to import (iotaprivkey1...)
+- `ed25519`: Key type (ed25519)
+- `--alias <name>`: Alias name for the imported key
+
+**Example:**
+
+```bash
+iota keytool import iotaprivkey1qp5n5ermut5gvfnvcdp5yhdk50jkdurqydyu7pz3e5qysdvpe6xtqka84au ed25519 --alias dcs_cid_owner
+```
+
+### 4.5. Switch Address
+
+```bash
+iota client switch --address <address>
+```
+
+**Description:**
+
+- Switch the default signer address for the IOTA client
+- Sets the active address that will be used for transactions when no address is explicitly specified
+- Useful for managing multiple accounts
+
+**Options:**
+
+- `--address <address>`: Address to set as default (0x...)
+
+**Example:**
+
+```bash
+iota client switch --address 0x731f57d2f3c5b102e5a4d182c8d4b6c06f0ba3aaf5534e1913e99631163d3edd
+```
+
+### 4.6. List Addresses
+
+```bash
+iota client addresses
+```
+
+**Description:**
+
+- List all addresses associated with the current IOTA client configuration
+- Shows addresses that have been imported or created
+- Useful for verifying available accounts
+
+**Example:**
+
+```bash
+iota client addresses
+```
+
+### 4.7. Create Gas Coin Object
+
+```bash
+iota client pay-iota --input-coins <coin-id> --amounts <amount> --recipients <address>
+```
+
+**Description:**
+
+- Transfer IOTA tokens and create a new gas coin object
+- Splits an existing coin into a new gas coin object with a new ID
+- The new gas coin object ID is automatically generated (cannot be specified)
+- Useful for creating gas coins for transactions
+
+**Options:**
+
+- `--input-coins <coin-id>`: Input coin object ID to spend from (0x...)
+- `--amounts <amount>`: Amount to send (in nanos)
+- `--recipients <address>`: Recipient address (0x...)
+
+**Example:**
+
+```bash
+iota client pay-iota --input-coins 0x55ed45ebd47a7c315856871b190e35b1457852862fa42aeb002faf37e1bea90a --amounts 16000 --recipients 0xea8180205d4c42f165083d2a42da34b329ac866f8c0eccb9b458bb6a41009296
+```
+
+**Notes:**
+
+- Creates a new gas coin object with a new ID (the ID cannot be specified)
+
+## 5. Main Test Scenario
+
+This section outlines a complete test scenario for the CID lifecycle, from creation through offer submission, approval, honoring, and withdrawal. In this scenario we provide the commands for an object with CID ID `0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0`. Furthermore, the default epoch duration has been adjusted as following to ease the tests:
+
+- during the first 10 minutes of each epoch, an offer can be submitted by the user
+- after an offer has been approved, the user should honor it during the succeeding epoch (waiting 10 minutes before the epoch transition could be performed)
+
+### 5.1. Create CID (user)
+
+```bash
+go run main.go iota_sc cid create QmaQXHJTDFKkcgKaMBRLpG9pobg2a5ph44kF5Z8u2UU2iG --epoch-start 0 --epoch-end 0 --type cid
+```
+
+### 5.2. Submit Offer (provider)
+
+```bash
+go run main.go iota_sc submit_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --amount 100000
+```
+
+**Notes:**
+
+- Must be executed within the time limit (before the timer from the following command is expired)
+- After the command, the offer is in the **next** epoch, with `approved: false`, `honored: false`, `paid: false`
+
+### 5.3. List Open Offers
+
+```bash
+go run main.go iota_sc list-open-offers
+```
+
+**Notes:**
+
+- Shows active offers and the time after which they can be approved
+
+### 5.4. Approve Offer (user)
+
+```bash
+go run main.go iota_sc approve_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
+```
+
+**Notes:**
+
+- Execute immediately after the time limit for submitting offers has expired
+- After the command, the offer is in the **next** epoch, with `approved: true`, `honored: false`, `paid: false`
+
+### 5.5. Transition to Next Epoch (user)
+
+```bash
+go run main.go iota_sc cid next-epoch 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0
+```
+
+**Notes:**
+
+- Execute immediately after the previous step
+- Only effective after the actual end of the current epoch
+- After the command, the offer is in the **current** epoch, with `approved: true`, `honored: false`, `paid: false`
+
+### 5.6. Honor Offer (user)
+
+```bash
+go run main.go iota_sc honor_offer --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
+```
+
+**Notes:**
+
+- Must be executed before the end of the current epoch
+- After the command, the offer is in the **current** epoch, with `approved: true`, `honored: true`, `paid: false`
+
+### 5.7. Transition to Next Epoch (Again) (user)
+
+```bash
+go run main.go iota_sc cid next-epoch 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0
+```
+
+**Notes:**
+
+- Only effective after the actual end of the current epoch
+- After the command, the offer is in the **previous** epoch, with `approved: true`, `honored: true`, `paid: false`
+
+### 5.8. Withdraw (provider)
+
+```bash
+go run main.go iota_sc withdraw --cid 0x87b8e522174e753ab17f67f353a339c9df16f893fa5d679b604c1f197107cbd0 --idx 0
+```
+
+**Notes:**
+
+- Execute after the ex-current epoch (now previous epoch) has ended and before transitioning to the next one
+- After the command, the offer is in the **previous** epoch, with `approved: true`, `honored: true`, `paid: true`

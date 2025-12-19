@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type RemoveParams struct {
@@ -30,64 +31,47 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	var p RemoveParams
 
 	if len(args) == 0 {
-		return p, fmt.Errorf("provide CID ID or CID string as argument")
+		return p, fmt.Errorf("provide CID object ID as argument")
 	}
 
-	cidType, err := cmd.Flags().GetString("cid-type")
+	// Use the argument directly as CID object ID
+	p.CIDId = args[0]
+
+	// Get RPC URL
+	p.RPCURL = viper.GetString("rpc")
+	if p.RPCURL == "" {
+		if u := os.Getenv("REBASE_RPC"); u != "" {
+			p.RPCURL = u
+		} else if u := os.Getenv("DCS_RPC"); u != "" {
+			p.RPCURL = u
+		} else {
+			p.RPCURL = "https://api.testnet.iota.cafe:443"
+		}
+	}
+
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
 	if err != nil {
 		return p, err
 	}
+	p.UserPrivateKey = privKey
 
-	// Validate cidType
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("cid-type must be either 'id' or 'cid', got: %s", cidType)
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
+	if err != nil {
+		return p, err
 	}
+	p.UserSignerAddress = signer
 
-	// Set the cidId based on type
-	if cidType == "id" {
-		p.CIDId = args[0]
-	} else {
-		cidStr := args[0]
-
-		// Get RPC URL first (needed for GetCIDIdFromList)
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
-		}
-
-		// Get the CID object ID from the CIDlist
-		cidId, err := GetCIDIdFromList(cmd.Context(), cidStr, p.RPCURL)
-		if err != nil {
-			return p, fmt.Errorf("failed to find CID object: %w", err)
-		}
-		p.CIDId = cidId
+	// Resolve gas coin ID and verify ownership
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
+	gasID, err := wallet.ResolveGasCoinId(cmd.Context(), gasIDFlag, signer, p.RPCURL, "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+	if err != nil {
+		return p, err
 	}
-
-	// Get private key: flag takes priority over env var
-	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
-		p.UserPrivateKey = privateKeyFlag
-	}
-
-	// Get user signer address
-	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
-		p.UserSignerAddress = signerAddress
-	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv
-	} else {
-		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
-	}
-
-	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
-	p.GasID = os.Getenv("USER_GAS_COIN_ID")
-	if p.GasID == "" {
-		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
-	}
+	p.GasID = gasID
 
 	// Get package ID
 	p.PackageID = viper.GetString("dcs.package_id")
@@ -114,20 +98,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 	}
 	if p.GasBudget == 0 {
 		p.GasBudget = 10_000_000 // default
-	}
-
-	// Get RPC URL if not already set
-	if p.RPCURL == "" {
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
-		}
 	}
 
 	return p, nil

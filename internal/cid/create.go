@@ -16,12 +16,14 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type CreateParams struct {
 	CID               string
 	EpochStart        uint64
 	EpochEnd          uint64
+	Amount            uint64
 	WhitelistID       string
 	CIDListID         string
 	PackageID         string
@@ -30,6 +32,24 @@ type CreateParams struct {
 	RPCURL            string
 	UserSignerAddress string
 	UserPrivateKey    string
+}
+
+type GasCoinParams struct {
+	RPCURL            string
+	GasID             string
+	GasBudget         uint64
+	UserSignerAddress string
+	UserPrivateKey    string
+}
+
+func (p CreateParams) GasCoinConfig() GasCoinParams {
+	return GasCoinParams{
+		RPCURL:            p.RPCURL,
+		GasID:             p.GasID,
+		GasBudget:         p.GasBudget,
+		UserSignerAddress: p.UserSignerAddress,
+		UserPrivateKey:    p.UserPrivateKey,
+	}
 }
 
 func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
@@ -45,6 +65,13 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 	epochEnd, _ := cmd.Flags().GetUint64("epoch-end")
 	p.EpochStart = epochStart
 	p.EpochEnd = epochEnd
+
+	// Get amount from flag
+	amount, _ := cmd.Flags().GetUint64("amount")
+	if amount == 0 {
+		amount = 100000 // default value
+	}
+	p.Amount = amount
 
 	// Auto-compute epochs when user passes 0 (no pre-computation needed)
 	if p.EpochStart == 0 || p.EpochEnd == 0 {
@@ -92,35 +119,6 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
 	}
 
-	// Get private key: flag takes priority over env var
-	if privateKeyFlag, _ := cmd.Flags().GetString("user-private-key"); privateKeyFlag != "" {
-		p.UserPrivateKey = privateKeyFlag
-	}
-
-	// Get user signer address
-	if signerAddress, _ := cmd.Flags().GetString("user-address"); signerAddress != "" {
-		p.UserSignerAddress = signerAddress
-	} else if userAddressEnv := os.Getenv("USER_ADDRESS"); userAddressEnv != "" {
-		p.UserSignerAddress = userAddressEnv
-	} else {
-		return p, fmt.Errorf("set USER_ADDRESS env var or pass --user-address")
-	}
-
-	// Get gas gas coin ID for user, this will be used to create the new COIN object for the cid creation
-	p.GasID = os.Getenv("USER_GAS_COIN_ID")
-	if p.GasID == "" {
-		return p, fmt.Errorf("set USER_GAS_COIN_ID env var or pass --user-coin-id (0x...)")
-	}
-
-	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
-		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
-			p.GasBudget = v
-		}
-	}
-	if p.GasBudget == 0 {
-		p.GasBudget = 10_000_000 // default
-	}
-
 	// Get RPC URL
 	p.RPCURL = viper.GetString("rpc")
 	if p.RPCURL == "" {
@@ -133,24 +131,56 @@ func LoadCreateParams(cmd *cobra.Command, args []string) (CreateParams, error) {
 		}
 	}
 
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
+	}
+	p.UserPrivateKey = privKey
+
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
+	if err != nil {
+		return p, err
+	}
+	p.UserSignerAddress = signer
+
+	// Resolve gas coin ID and verify ownership
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
+	gasID, err := wallet.ResolveGasCoinId(cmd.Context(), gasIDFlag, signer, p.RPCURL, "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+	if err != nil {
+		return p, err
+	}
+	p.GasID = gasID
+
+	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
+		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
+			p.GasBudget = v
+		}
+	}
+	if p.GasBudget == 0 {
+		p.GasBudget = 10_000_000 // default
+	}
+
 	return p, nil
 }
 
-// CreateGasCoin creates a new gas coin for the CID creation with payIota function
-func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount int64) (string, error) {
+// CreateGasCoin creates a new gas coin with payIota function
+func CreateGasCoin(ctx context.Context, p GasCoinParams, amount uint64) (string, error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
 		return "", fmt.Errorf("error RPC dial failed: %w", err)
 	}
 
 	// Build unsigned transaction
-	fmt.Println("Building transaction pay iota to create a new gas coin...")
 	txb, err := w.PayIotaUnsigned(ctx,
-		p.UserSignerAddress,                 // signer
-		[]string{p.GasID},                   // input_coins
-		[]string{p.UserSignerAddress},       // recipients (pay to yourself)
+		p.UserSignerAddress,           // signer
+		[]string{p.GasID},             // input_coins
+		[]string{p.UserSignerAddress}, // recipients (pay to yourself)
 		[]string{fmt.Sprintf("%d", amount)}, // amounts
-		p.GasBudget,                         // gas_budget
+		p.GasBudget, // gas_budget
 	)
 
 	if err != nil {
@@ -166,7 +196,6 @@ func CreateGasCoin(ctx context.Context, p CreateParams, coinID string, amount in
 	}
 
 	// Execute transaction
-	fmt.Println("Executing the transaction pay iota to create a new gas coin...")
 	opts := &suitypes.SuiTransactionBlockResponseOptions{
 		ShowEffects:       true,
 		ShowEvents:        true,
@@ -357,25 +386,52 @@ func extractCidIdFromResponse(rsp *suitypes.SuiTransactionBlockResponse) (string
 		return "", fmt.Errorf("no object changes found in transaction response")
 	}
 
-	// Marshal to JSON and extract created object IDs
+	// Search in the ObjectChanges array for objects "created" with type CID and owner Shared
+	for _, change := range rsp.ObjectChanges {
+		// Marshal to access the fields
+		changeJSON, err := json.Marshal(change)
+		if err != nil {
+			continue
+		}
+
+		var changeMap map[string]interface{}
+		if err := json.Unmarshal(changeJSON, &changeMap); err != nil {
+			continue
+		}
+
+		// Search for the "Data": {"created": {...}} structure
+		if data, ok := changeMap["Data"].(map[string]interface{}); ok {
+			if created, ok := data["created"].(map[string]interface{}); ok {
+				// Verify that it is a CID object
+				if objectType, ok := created["objectType"].(string); ok {
+					if strings.Contains(objectType, "CID") {
+						// Verify that it has Shared owner (indicating it was shared)
+						if owner, ok := created["owner"].(map[string]interface{}); ok {
+							if shared, ok := owner["Shared"].(map[string]interface{}); ok && shared != nil {
+								if objectId, ok := created["objectId"].(string); ok {
+									return objectId, nil
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: search with regex in the marshaled JSON
 	b, err := json.Marshal(rsp.ObjectChanges)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal object changes: %w", err)
 	}
 
-	// Look for all object IDs in the JSON
-	re := regexp.MustCompile(`"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
-	matches := re.FindAllStringSubmatch(string(b), -1)
-
-	if len(matches) == 0 {
-		return "", fmt.Errorf("no object ID found in transaction response")
+	// Pattern to search for "created" with objectId and type containing CID, with Shared owner
+	re := regexp.MustCompile(`"created"\s*:\s*\{[^}]*"objectType"\s*:\s*"[^"]*CID[^"]*"[^}]*"owner"\s*:\s*\{[^}]*"Shared"[^}]*\}[^}]*"objectId"\s*:\s*"(0x[a-fA-F0-9]{64})"`)
+	matches := re.FindStringSubmatch(string(b))
+	if len(matches) > 1 {
+		return matches[1], nil
 	}
 
-	// Return the objectId from the LAST match (last index in the array)
-	lastMatch := matches[len(matches)-1]
-	if len(lastMatch) > 1 {
-		return lastMatch[1], nil
-	}
-
-	return "", fmt.Errorf("no CID object ID found in transaction response")
+	// If no created CID object with Shared owner is found, the user was not whitelisted
+	return "", fmt.Errorf("no CID object found in transaction response: user may not be whitelisted")
 }

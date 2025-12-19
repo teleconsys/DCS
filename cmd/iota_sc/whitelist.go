@@ -97,16 +97,18 @@ func newWhitelistAddCmd() *cobra.Command {
 				cmd.Println("Address is already in the whitelist.")
 				return nil
 			}
-			cmd.Print(string(out))
+			// cmd.Print(string(out))
 			if err != nil {
 				return fmt.Errorf("iota client call failed: %w", err)
 			}
+			cmd.Printf("Address %s successfully added to the whitelist.\n", p.Member)
+			_ = out // out is kept for potential future use but not printed
 			return nil
 		},
 	}
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
 	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
 	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
 	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
 	return c
@@ -134,16 +136,18 @@ func newWhitelistRemoveCmd() *cobra.Command {
 				cmd.Println("Address is not in the whitelist.")
 				return nil
 			}
-			cmd.Print(string(out))
+			// cmd.Print(string(out))
 			if err != nil {
 				return fmt.Errorf("iota client call failed: %w", err)
 			}
+			cmd.Printf("Address %s successfully removed from the whitelist.\n", p.Member)
+			_ = out // out is kept for potential future use but not printed
 			return nil
 		},
 	}
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to remove (0x...)")
 	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "gas", "", "Gas coin object ID (0x...)")
+	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
 	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
 	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
 	return c

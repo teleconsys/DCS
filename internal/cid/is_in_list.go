@@ -19,43 +19,22 @@ func LoadIsInListParams(cmd *cobra.Command, args []string) (IsInListParams, erro
 	var p IsInListParams
 
 	if len(args) == 0 {
-		return p, fmt.Errorf("provide CID ID or CID string as argument")
+		return p, fmt.Errorf("provide CID object ID as argument")
 	}
 
-	cidType, err := cmd.Flags().GetString("cid-type")
-	if err != nil {
-		return p, err
-	}
+	// Use the argument directly as CID object ID
+	p.CIDId = args[0]
 
-	// Validate cidType
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("cid-type must be either 'id' or 'cid', got: %s", cidType)
-	}
-
-	// Set the cidId based on type
-	if cidType == "id" {
-		p.CIDId = args[0]
-	} else {
-		cidStr := args[0]
-
-		// Get RPC URL first (needed for GetCIDIdFromList)
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
+	// Get RPC URL
+	p.RPCURL = viper.GetString("rpc")
+	if p.RPCURL == "" {
+		if u := os.Getenv("REBASE_RPC"); u != "" {
+			p.RPCURL = u
+		} else if u := os.Getenv("DCS_RPC"); u != "" {
+			p.RPCURL = u
+		} else {
+			p.RPCURL = "https://api.testnet.iota.cafe:443"
 		}
-
-		// Get the CID object ID from the CIDlist
-		cidId, err := GetCIDIdFromList(cmd.Context(), cidStr, p.RPCURL)
-		if err != nil {
-			return p, fmt.Errorf("failed to find CID object: %w", err)
-		}
-		p.CIDId = cidId
 	}
 
 	// Get CID list ID
@@ -65,20 +44,6 @@ func LoadIsInListParams(cmd *cobra.Command, args []string) (IsInListParams, erro
 	}
 	if p.CIDListID == "" {
 		return p, fmt.Errorf("set DCS_CIDLIST_ID env var or pass --cidlist-id (0x...)")
-	}
-
-	// Get RPC URL if not already set
-	if p.RPCURL == "" {
-		p.RPCURL = viper.GetString("rpc")
-		if p.RPCURL == "" {
-			if u := os.Getenv("REBASE_RPC"); u != "" {
-				p.RPCURL = u
-			} else if u := os.Getenv("DCS_RPC"); u != "" {
-				p.RPCURL = u
-			} else {
-				p.RPCURL = "https://api.testnet.iota.cafe:443"
-			}
-		}
 	}
 
 	return p, nil

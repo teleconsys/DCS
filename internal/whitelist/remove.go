@@ -55,9 +55,13 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
 	}
 
-	p.GasID = os.Getenv("WALLET_GAS_ID")
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
+	p.GasID = gasIDFlag
 	if p.GasID == "" {
-		return p, fmt.Errorf("set WALLET_GAS_ID env var or --gas (0x...)")
+		p.GasID = os.Getenv("GC_WALLET_GAS_ID")
+	}
+	if p.GasID == "" {
+		return p, fmt.Errorf("set GC_WALLET_GAS_ID env var or --signer-gas-id (0x...)")
 	}
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {

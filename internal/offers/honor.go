@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
-	cidlib "github.com/teleconsys/DCS/internal/cid"
 	"github.com/teleconsys/DCS/internal/rebased"
+	"github.com/teleconsys/DCS/internal/wallet"
 )
 
 type HonorOfferParams struct {
@@ -27,15 +26,6 @@ type HonorOfferParams struct {
 	Debug       bool
 }
 
-func firstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if s := strings.TrimSpace(v); s != "" {
-			return s
-		}
-	}
-	return ""
-}
-
 // LoadHonorParams loads parameters from command flags and environment variables
 func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (HonorOfferParams, error) {
 	var p HonorOfferParams
@@ -43,32 +33,18 @@ func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (Ho
 	// Get CID from flag
 	cidArg, _ := cmd.Flags().GetString("cid")
 	if cidArg == "" {
-		return p, fmt.Errorf("--cid is required (object id or CID string)")
+		return p, fmt.Errorf("--cid is required (object id 0x...)")
 	}
 
-	// Get CID type
-	cidType, _ := cmd.Flags().GetString("cid-type")
-	if cidType != "id" && cidType != "cid" {
-		return p, fmt.Errorf("--cid-type must be 'id' or 'cid'")
-	}
+	// Use the flag value directly as CID object ID
+	p.CIDObjectID = cidArg
 
-	// Get RPC URL (needed for CID resolution)
+	// Get RPC URL
 	rpc := os.Getenv("REBASE_RPC")
 	if rpc == "" {
 		rpc = "https://api.testnet.iota.cafe:443"
 	}
 	p.RPCURL = rpc
-
-	// Resolve CID to object ID if needed
-	cidObjectID := cidArg
-	if cidType == "cid" {
-		id, err := cidlib.GetCIDIdFromList(ctx, cidArg, rpc)
-		if err != nil {
-			return p, err
-		}
-		cidObjectID = id
-	}
-	p.CIDObjectID = cidObjectID
 
 	// Get index from flag
 	idx, _ := cmd.Flags().GetUint64("idx")
@@ -78,26 +54,27 @@ func LoadHonorParams(ctx context.Context, cmd *cobra.Command, args []string) (Ho
 	debug, _ := cmd.Flags().GetBool("debug")
 	p.Debug = debug
 
-	// Get signer address: flags > OWNER_* > USER_* > GC_*
-	flagSigner, _ := cmd.Flags().GetString("signer-address")
-	signer := firstNonEmpty(
-		flagSigner,
-		os.Getenv("USER_ADDRESS"),
-	)
-	if signer == "" {
-		return p, fmt.Errorf("missing signer address (set --signer-address or OWNER_ADDRESS / USER_ADDRESS / GC_ADDRESS)")
+	// Read private key
+	privKeyFlag, _ := cmd.Flags().GetString("signer-private-key")
+	privKey, err := wallet.ResolvePrivateKey(privKeyFlag)
+	if err != nil {
+		return p, err
+	}
+	p.PrivKey = privKey
+
+	// Resolve signer address (derive from private key, compare with flag/env, confirm if mismatch)
+	signerFlag, _ := cmd.Flags().GetString("signer-address")
+	signer, err := wallet.ResolveSignerAddress(privKey, signerFlag, "ACTIVE_ADDRESS", "USER_ADDRESS")
+	if err != nil {
+		return p, err
 	}
 	p.Signer = signer
-	flagPrivKey, _ := cmd.Flags().GetString("signer-private-key")
-	p.PrivKey = strings.TrimSpace(flagPrivKey)
-	// Get gas coin ID: flags > OWNER_* > USER_* > WALLET_*
-	flagGasID, _ := cmd.Flags().GetString("gas-id")
-	gasID := firstNonEmpty(
-		flagGasID,
-		os.Getenv("USER_GAS_COIN_ID"),
-	)
-	if gasID == "" {
-		return p, fmt.Errorf("missing gas coin id (set --gas-id or OWNER_GAS_COIN_ID / USER_GAS_COIN_ID / WALLET_GAS_ID)")
+
+	// Resolve gas coin ID and verify ownership
+	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
+	gasID, err := wallet.ResolveGasCoinId(ctx, gasIDFlag, signer, p.RPCURL, "ACTIVE_GAS_COIN_ID", "USER_GAS_COIN_ID")
+	if err != nil {
+		return p, err
 	}
 	p.GasID = gasID
 

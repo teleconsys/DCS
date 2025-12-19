@@ -1,11 +1,19 @@
 package whitelist
 
 import (
-	//"bytes"
-	// "encoding/json"
-	// "fmt"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
 	"strings"
 )
+
+// GroundControlInfo holds the ground control information from the API
+type GroundControlInfo struct {
+	Address     string
+	PrivateKey  string
+	WalletGasID string
+}
 
 // // keepJSON drops anything before the first '{' or '['.
 // // Some CLIs print banners or warnings before the JSON.
@@ -69,4 +77,46 @@ func whitelistContainsAddress(raw any, address string) bool {
 		}
 	}
 	return false
+}
+
+// GetGroundControlInfo fetches ground control information from the API server
+// configured via GC_ENDPOINT and GC_ENDPOINT_PORT environment variables
+func GetGroundControlInfo() (*GroundControlInfo, error) {
+	endpoint := os.Getenv("GC_ENDPOINT")
+	if endpoint == "" {
+		return nil, fmt.Errorf("GC_ENDPOINT environment variable is not set")
+	}
+
+	url := fmt.Sprintf("http://%s/get-groundcontrol-info", endpoint)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch ground control info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status code %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Address     string `json:"address"`
+		PrivateKey  string `json:"privateKey"`
+		WalletGasID string `json:"walletGasId"`
+		Error       string `json:"error,omitempty"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if result.Error != "" {
+		return nil, fmt.Errorf("API error: %s", result.Error)
+	}
+
+	return &GroundControlInfo{
+		Address:     result.Address,
+		PrivateKey:  result.PrivateKey,
+		WalletGasID: result.WalletGasID,
+	}, nil
 }

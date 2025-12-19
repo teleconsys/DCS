@@ -24,6 +24,7 @@ type RemoveParams struct {
 	GasBudget     uint64
 	RPCURL        string
 	SignerAddress string
+	PrivateKey    string
 }
 
 func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
@@ -57,12 +58,6 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 
 	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
 	p.GasID = gasIDFlag
-	if p.GasID == "" {
-		p.GasID = os.Getenv("GC_WALLET_GAS_ID")
-	}
-	if p.GasID == "" {
-		return p, fmt.Errorf("set GC_WALLET_GAS_ID env var or --signer-gas-id (0x...)")
-	}
 
 	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
 		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
@@ -84,12 +79,19 @@ func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
 		}
 	}
 
-	if s := os.Getenv("GC_ADDRESS"); s != "" {
-		p.SignerAddress = strings.ToLower(s)
+	// Fetch ground control info from API server
+	gcInfo, err := GetGroundControlInfo()
+	if err != nil {
+		return p, fmt.Errorf("failed to get ground control info: %w", err)
 	}
-	if p.SignerAddress == "" {
-		return p, fmt.Errorf("set GC_ADDRESS (0x...) for signer/fee payer")
+
+	// Use API values unless overridden by flags/env
+	if p.GasID == "" {
+		p.GasID = gcInfo.WalletGasID
 	}
+
+	p.SignerAddress = strings.ToLower(gcInfo.Address)
+	p.PrivateKey = gcInfo.PrivateKey
 
 	return p, nil
 }
@@ -124,14 +126,9 @@ func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPr
 		return nil, false, fmt.Errorf("build move call: %w", err)
 	}
 
-	gcKey := os.Getenv("GC_PRIVATE_KEY")
-	if gcKey == "" {
-		return nil, false, fmt.Errorf("GC_PRIVATE_KEY not set")
-	}
-
 	rawTx := []byte(txb.TxBytes)                          // sign raw bytes
 	base64Tx := base64.StdEncoding.EncodeToString(rawTx)  // submit as base64
-	sigB64, err := rebased.SignTxBytes(ctx, rawTx, gcKey) // bech32/base64 key supported
+	sigB64, err := rebased.SignTxBytes(ctx, rawTx, p.PrivateKey) // bech32/base64 key supported
 	if err != nil {
 		return nil, false, fmt.Errorf("sign tx: %w", err)
 	}

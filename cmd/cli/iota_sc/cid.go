@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/teleconsys/DCS/cmd/ipfs"
+	"github.com/teleconsys/DCS/cmd/cli/ipfs"
 	cid_sc "github.com/teleconsys/DCS/internal/cid"
 )
 

@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"fmt"
@@ -12,9 +12,9 @@ import (
 	"github.com/teleconsys/DCS/internal/config"
 
 	// sub-trees
-	"github.com/teleconsys/DCS/cmd/app"
-	"github.com/teleconsys/DCS/cmd/iota_sc"
-	"github.com/teleconsys/DCS/cmd/ipfs"
+	"github.com/teleconsys/DCS/cmd/cli/app"
+	"github.com/teleconsys/DCS/cmd/cli/iota_sc"
+	"github.com/teleconsys/DCS/cmd/cli/ipfs"
 )
 
 var cfgFile string
@@ -64,4 +64,9 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+
+func main() {
+	Execute()
 }

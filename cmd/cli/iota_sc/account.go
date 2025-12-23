@@ -36,13 +36,12 @@ func newAccountCmd() *cobra.Command {
 		Use:   "new",
 		Short: "Generate an ed25519 keypair and address; optionally fund via faucet from .env",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 0) Normalizza e valida l'alias.
+			// 0) Validate alias.
 			alias = strings.TrimSpace(alias)
 			if alias == "" {
 				return errors.New("missing --alias")
 			}
 
-			// Alias usato come nome file: whitelist di caratteri sicuri.
 			for _, r := range alias {
 				if !((r >= 'a' && r <= 'z') ||
 					(r >= 'A' && r <= 'Z') ||
@@ -77,14 +76,13 @@ func newAccountCmd() *cobra.Command {
 
 			outPath := filepath.Join(dir, alias+".json")
 
-			// Non sovrascrivere file esistente.
 			if _, err := os.Stat(outPath); err == nil {
 				return fmt.Errorf("account file already exists: %s", outPath)
 			} else if !errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("stat %s: %w", outPath, err)
 			}
 
-			// 4) Serializza l’account.
+			// 4) Serialize.
 			payload := struct {
 				Alias      string `json:"alias"`
 				Address    string `json:"address"`
@@ -106,19 +104,19 @@ func newAccountCmd() *cobra.Command {
 				return fmt.Errorf("write %s: %w", outPath, err)
 			}
 
-			// 5) Stampa riepilogo account.
+			// 5) Print account summary.
 			cmd.Println("account created")
 			cmd.Printf("alias:   %s\n", alias)
 			cmd.Printf("address: %s\n", addr)
 			cmd.Printf("privkey: %s\n", hex.EncodeToString(priv))
 			cmd.Printf("saved:   %s\n", outPath)
 
-			// 6) Faucet opzionale.
+			// 6) Optional faucet request.
 			if noFaucet {
 				return nil
 			}
 
-			faucetURL := os.Getenv("FAUCET_URL") // loaded by internal/config/dotenv.go
+			faucetURL := os.Getenv("FAUCET_URL")
 			if faucetURL == "" {
 				return errors.New("FAUCET_URL not set in environment/.env; use --no_faucet to skip")
 			}

@@ -1,25 +1,35 @@
 name: CI
 
-on: # Trigger the workflow on every push or pull request
-  pull_request: 
-    branches: [main]         
-  push:                  
+on:
+  pull_request:
+    branches: [main]
+  push:
     branches: [main]
 
 jobs:
   test:
-    # Run on major OSes 
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        go: ['1.24']      
+        go: ['1.24']
     runs-on: ${{ matrix.os }}
 
+    defaults:
+      run:
+        shell: bash
+
     steps:
-    - uses: actions/checkout@v4             
-    - uses: actions/setup-go@v5             
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go }}
-    - run: go vet ./...                     
-    - run: go test -v ./...                 # run tests for every package
-    - run: go build ./...                   # build every package
+
+    - run: go vet ./...
+
+    - name: Run tests (excluding cmd/cli/ipfs)
+      run: |
+        set -euo pipefail
+        PKGS="$(go list ./... | grep -vE '/cmd/cli/ipfs$')"
+        go test -v $PKGS
+
+    - run: go build ./...

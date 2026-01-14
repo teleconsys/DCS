@@ -1,0 +1,40 @@
+# Ignore files not necessary for the Docker build
+.git
+.gitignore
+*.md
+testsheet.md
+README.md
+
+# Ignore development files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Ignore build and unnecessary binaries
+bin/windows/
+*.exe
+
+# Ignore Go files not necessary
+*.go
+go.mod
+go.sum
+cmd/
+internal/
+
+# Ignore test files
+*_test.go
+*.test
+
+# Ignore local configuration files (if present)
+.env
+.env.local
+.env.*.local
+
+# Ignore other temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+

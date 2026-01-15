@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/teleconsys/DCS/cmd/cli/ipfs"
 	cid_sc "github.com/teleconsys/DCS/internal/cid"
+	"github.com/teleconsys/DCS/internal/ipfsutil"
 )
 
 func cidCmd() *cobra.Command {
@@ -26,9 +26,7 @@ func cidCmd() *cobra.Command {
 	return cmd
 }
 
-/*
-Create a CID
-*/
+// Create a CID
 func createCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create --type <path|cid> [CID]",
@@ -67,13 +65,13 @@ Examples:
 				filePath := args[0]
 				// Upload file to IPFS
 				cmd.Printf("Uploading file %s to IPFS...\n", filePath)
-				ipfsPath, err := ipfs.LoadFileToIPFS(filePath)
+				ipfsPath, err := ipfsutil.LoadFileToIPFS(filePath)
 				if err != nil {
 					cmd.PrintErrf("Failed to load file to IPFS: %v\n", err)
 					return err
 				}
 
-				// Extract CID from IPFS path (remove /ipfs/ prefix if present)
+				// Extract CID from IPFS path
 				cidStr = strings.TrimPrefix(ipfsPath, "/ipfs/")
 				cmd.Printf("✅ File uploaded to IPFS with CID: %s\n", cidStr)
 			} else {
@@ -102,7 +100,7 @@ Examples:
 			}
 			cmd.Printf("✅ New gas coin created successfully, new coin ID: %s\n", cidCoinId)
 
-			// Create CID object using new wrapper
+			// Create CID object
 			cmd.Printf("Creating CID object...\n")
 			_, cidId, err := cid_sc.CreateCID(cmd.Context(), params, cidCoinId)
 			if err != nil {
@@ -113,7 +111,7 @@ Examples:
 			cmd.Printf("✅ CID object created with ID: %s\n", cidId)
 			cmd.Printf("✅ Coin ID created for CID object: %s\n", cidCoinId)
 
-			// Add CID to CID list using new wrapper
+			// Add CID to CID list
 			cmd.Printf("Adding CID to CID list...\n")
 			_, err = cid_sc.AddToCIDList(cmd.Context(), params, cidId)
 			if err != nil {
@@ -135,16 +133,13 @@ Examples:
 	cmd.Flags().String("signer-address", "", "Address of the signer (overwrite ACTIVE_ADDRESS and USER_ADDRESS env var)")
 	cmd.Flags().String("signer-gas-id", "", "Gas coin object ID (overwrite ACTIVE_GAS_COIN_ID and USER_GAS_COIN_ID env var)")
 
-	// Mark required flags
 	cmd.MarkFlagRequired("type")
 	cmd.MarkFlagRequired("epoch-start")
 	cmd.MarkFlagRequired("epoch-end")
 	return cmd
 }
 
-/*
-Remove a CID
-*/
+// Remove a CID
 func removeCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove [objectId]",
@@ -177,23 +172,21 @@ func removeCidCmd() *cobra.Command {
 	return cmd
 }
 
-/*
-Check if a CID is listed in the smart contract
-*/
+// Check if a CID is listed in the smart contract
 func isInListCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "is-in-list [objectId]",
 		Short: "Check if a CID ID is listed in the smart contract",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Load parameters using the new wrapper
+			// Load parameters
 			params, err := cid_sc.LoadIsInListParams(cmd, args)
 			if err != nil {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)
 				return err
 			}
 
-			// Check if CID is in list using new wrapper
+			// Check if CID is in list
 			found, err := cid_sc.IsInList(cmd.Context(), params)
 			if err != nil {
 				cmd.PrintErrf("Failed to check CID list: %v\n", err)
@@ -219,7 +212,7 @@ func transitionEpochCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			// Load parameters using the new wrapper
+			// Load parameters
 			params, err := cid_sc.LoadTransitionParams(cmd, args)
 			if err != nil {
 				cmd.PrintErrf("❌ Failed to load parameters: %v\n", err)
@@ -250,9 +243,7 @@ func transitionEpochCmd() *cobra.Command {
 	return cmd
 }
 
-/*
-Add funds to a CID
-*/
+// Add funds to a CID
 func addFundsCidCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "add-funds [objectId]",
@@ -260,7 +251,7 @@ func addFundsCidCmd() *cobra.Command {
 		Short:   "Deposit IOTA coins into a CID",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Load parameters using the new wrapper
+			// Load parameters
 			params, err := cid_sc.LoadAddFundsParams(cmd, args)
 			if err != nil {
 				cmd.PrintErrf("Failed to load parameters: %v\n", err)

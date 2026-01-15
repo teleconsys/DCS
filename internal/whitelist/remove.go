@@ -5,13 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/teleconsys/DCS/internal/rebased"
 )
@@ -27,76 +22,6 @@ type RemoveParams struct {
 	PrivateKey    string
 }
 
-func LoadRemoveParams(cmd *cobra.Command, args []string) (RemoveParams, error) {
-	var p RemoveParams
-
-	p.WhitelistID = viper.GetString("dcs.whitelist_id")
-	if p.WhitelistID == "" {
-		p.WhitelistID = os.Getenv("DCS_WHITELIST_ID")
-	}
-	if p.WhitelistID == "" {
-		return p, fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
-	}
-
-	if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
-		p.Member = mFlag
-	} else if len(args) > 0 {
-		p.Member = args[0]
-	}
-	if p.Member == "" {
-		return p, fmt.Errorf("provide address as positional arg or --member (0x...)")
-	}
-	p.Member = strings.ToLower(p.Member)
-
-	p.PackageID = viper.GetString("dcs.package_id")
-	if p.PackageID == "" {
-		p.PackageID = os.Getenv("DCS_PACKAGE_ID")
-	}
-	if p.PackageID == "" {
-		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
-	}
-
-	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
-	p.GasID = gasIDFlag
-
-	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
-		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
-			p.GasBudget = v
-		}
-	}
-	if p.GasBudget == 0 {
-		p.GasBudget = 10_000_000
-	}
-
-	p.RPCURL = viper.GetString("rpc")
-	if p.RPCURL == "" {
-		if u := os.Getenv("REBASE_RPC"); u != "" {
-			p.RPCURL = u
-		} else if u := os.Getenv("DCS_RPC"); u != "" {
-			p.RPCURL = u
-		} else {
-			p.RPCURL = "https://api.testnet.iota.cafe:443"
-		}
-	}
-
-	// Fetch ground control info from API server
-	gcInfo, err := GetGroundControlInfo()
-	if err != nil {
-		return p, fmt.Errorf("failed to get ground control info: %w", err)
-	}
-
-	// Use API values unless overridden by flags/env
-	if p.GasID == "" {
-		p.GasID = gcInfo.WalletGasID
-	}
-
-	p.SignerAddress = strings.ToLower(gcInfo.Address)
-	p.PrivateKey = gcInfo.PrivateKey
-
-	return p, nil
-}
-
-// RemoveFromWhitelist uses RPC only: Has -> build unsigned -> sign (GC_PRIVATE_KEY) -> execute.
 func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPresent bool, err error) {
 	w, err := rebased.Dial(p.RPCURL)
 	if err != nil {
@@ -126,8 +51,8 @@ func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPr
 		return nil, false, fmt.Errorf("build move call: %w", err)
 	}
 
-	rawTx := []byte(txb.TxBytes)                          // sign raw bytes
-	base64Tx := base64.StdEncoding.EncodeToString(rawTx)  // submit as base64
+	rawTx := []byte(txb.TxBytes)                                 // sign raw bytes
+	base64Tx := base64.StdEncoding.EncodeToString(rawTx)         // submit as base64
 	sigB64, err := rebased.SignTxBytes(ctx, rawTx, p.PrivateKey) // bech32/base64 key supported
 	if err != nil {
 		return nil, false, fmt.Errorf("sign tx: %w", err)

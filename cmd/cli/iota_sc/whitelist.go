@@ -2,10 +2,12 @@ package iota_sc
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/teleconsys/DCS/internal/gcclient"
 	"github.com/teleconsys/DCS/internal/whitelist"
 )
 
@@ -71,84 +73,106 @@ func newWhitelistHasCmd() *cobra.Command {
 	return c
 }
 
-// NOTE: add/remove subcommands are left as-is here (calling your library).
-// When you’re ready to drop the CLI for writes, we’ll switch those helpers
-// to the wrapper too (build unsigned -> sign -> ExecuteTransactionBlock).
-
 func newWhitelistAddCmd() *cobra.Command {
 	var member string
-	var pkgID string
-	var gasID string
-	var gasBudget uint64
-	var iotaBin string
+
+	var gcEndpoint string
+	var gcToken string
 
 	c := &cobra.Command{
 		Use:   "add [ADDRESS]",
-		Short: "Add ADDRESS/ID to the whitelist (requires signer)",
+		Short: "Add ADDRESS/ID to the whitelist (signed by GroundControl API)",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// unchanged: calls into your library; we’ll replace internals next step
-			p, err := whitelist.LoadAddParams(cmd, args)
+			m := strings.TrimSpace(member)
+			if m == "" && len(args) > 0 {
+				m = strings.TrimSpace(args[0])
+			}
+			if m == "" {
+				return fmt.Errorf("provide address as positional arg or --member (0x...)")
+			}
+
+			cli, err := gcclient.NewFromEnv(gcclient.Options{
+				EndpointOverride: gcEndpoint,
+				TokenOverride:    gcToken,
+			})
 			if err != nil {
 				return err
 			}
-			out, already, err := whitelist.AddToWhitelist(cmd.Context(), p)
-			if already {
+
+			resp, err := cli.WhitelistAdd(cmd.Context(), gcclient.WhitelistMutateRequest{
+				Member:      m,
+				WhitelistID: viper.GetString("dcs.whitelist_id"), // opzionale
+			})
+			if err != nil {
+				return err
+			}
+
+			if resp.Already {
 				cmd.Println("Address is already in the whitelist.")
 				return nil
 			}
-			// cmd.Print(string(out))
-			if err != nil {
-				return fmt.Errorf("iota client call failed: %w", err)
-			}
-			cmd.Printf("Address %s successfully added to the whitelist.\n", p.Member)
-			_ = out // out is kept for potential future use but not printed
+
+			cmd.Printf("Address %s successfully added to the whitelist.\n", strings.ToLower(m))
 			return nil
 		},
 	}
+
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to add (0x...)")
-	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
-	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
-	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
+	c.Flags().StringVar(&gcEndpoint, "gc-endpoint", "", "GroundControl API base URL (overrides GC_ENDPOINT env)")
+	c.Flags().StringVar(&gcToken, "gc-token", "", "GroundControl API token (overrides GC_API_TOKEN env)")
+
 	return c
 }
 
 func newWhitelistRemoveCmd() *cobra.Command {
 	var member string
-	var pkgID string
-	var gasID string
-	var gasBudget uint64
-	var iotaBin string
+
+	var gcEndpoint string
+	var gcToken string
 
 	c := &cobra.Command{
 		Use:   "remove [ADDRESS]",
-		Short: "Remove ADDRESS/ID from the whitelist (requires signer)",
+		Short: "Remove ADDRESS/ID from the whitelist (signed by GroundControl API)",
 		Args:  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// unchanged: calls into your library; we’ll replace internals next step
-			p, err := whitelist.LoadRemoveParams(cmd, args)
+			m := strings.TrimSpace(member)
+			if m == "" && len(args) > 0 {
+				m = strings.TrimSpace(args[0])
+			}
+			if m == "" {
+				return fmt.Errorf("provide address as positional arg or --member (0x...)")
+			}
+
+			cli, err := gcclient.NewFromEnv(gcclient.Options{
+				EndpointOverride: gcEndpoint,
+				TokenOverride:    gcToken,
+			})
 			if err != nil {
 				return err
 			}
-			out, notPresent, err := whitelist.RemoveFromWhitelist(cmd.Context(), p)
-			if notPresent {
+
+			resp, err := cli.WhitelistRemove(cmd.Context(), gcclient.WhitelistMutateRequest{
+				Member:      m,
+				WhitelistID: viper.GetString("dcs.whitelist_id"),
+			})
+			if err != nil {
+				return err
+			}
+
+			if resp.NotPresent {
 				cmd.Println("Address is not in the whitelist.")
 				return nil
 			}
-			// cmd.Print(string(out))
-			if err != nil {
-				return fmt.Errorf("iota client call failed: %w", err)
-			}
-			cmd.Printf("Address %s successfully removed from the whitelist.\n", p.Member)
-			_ = out // out is kept for potential future use but not printed
+
+			cmd.Printf("Address %s successfully removed from the whitelist.\n", strings.ToLower(m))
 			return nil
 		},
 	}
+
 	c.Flags().StringVarP(&member, "member", "m", "", "Address/ID to remove (0x...)")
-	c.Flags().StringVar(&pkgID, "package-id", "", "DCS package ID (0x...)")
-	c.Flags().StringVar(&gasID, "signer-gas-id", "", "Gas coin object ID (0x...)")
-	c.Flags().Uint64Var(&gasBudget, "gas-budget", 0, "Gas budget (nanos)")
-	c.Flags().StringVar(&iotaBin, "iota-bin", "", "Path to iota binary (ignored once RPC writes are enabled)")
+	c.Flags().StringVar(&gcEndpoint, "gc-endpoint", "", "GroundControl API base URL (overrides GC_ENDPOINT env)")
+	c.Flags().StringVar(&gcToken, "gc-token", "", "GroundControl API token (overrides GC_API_TOKEN env)")
+
 	return c
 }

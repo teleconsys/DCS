@@ -5,13 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/teleconsys/DCS/internal/rebased"
 )
@@ -25,75 +20,6 @@ type AddParams struct {
 	RPCURL        string
 	SignerAddress string
 	PrivateKey    string
-}
-
-func LoadAddParams(cmd *cobra.Command, args []string) (AddParams, error) {
-	var p AddParams
-
-	p.WhitelistID = viper.GetString("dcs.whitelist_id")
-	if p.WhitelistID == "" {
-		p.WhitelistID = os.Getenv("DCS_WHITELIST_ID")
-	}
-	if p.WhitelistID == "" {
-		return p, fmt.Errorf("set DCS_WHITELIST_ID env var or pass --id (0x...)")
-	}
-
-	if mFlag, _ := cmd.Flags().GetString("member"); mFlag != "" {
-		p.Member = mFlag
-	} else if len(args) > 0 {
-		p.Member = args[0]
-	}
-	if p.Member == "" {
-		return p, fmt.Errorf("provide address as positional arg or --member (0x...)")
-	}
-	p.Member = strings.ToLower(p.Member)
-
-	p.PackageID = viper.GetString("dcs.package_id")
-	if p.PackageID == "" {
-		p.PackageID = os.Getenv("DCS_PACKAGE_ID")
-	}
-	if p.PackageID == "" {
-		return p, fmt.Errorf("set DCS_PACKAGE_ID env var or --package-id (0x...)")
-	}
-
-	gasIDFlag, _ := cmd.Flags().GetString("signer-gas-id")
-	p.GasID = gasIDFlag
-
-	if s := os.Getenv("WALLET_GAS_BUDGET"); s != "" {
-		if v, err := strconv.ParseUint(s, 10, 64); err == nil {
-			p.GasBudget = v
-		}
-	}
-	if p.GasBudget == 0 {
-		p.GasBudget = 10_000_000
-	}
-
-	p.RPCURL = viper.GetString("rpc")
-	if p.RPCURL == "" {
-		if u := os.Getenv("REBASE_RPC"); u != "" {
-			p.RPCURL = u
-		} else if u := os.Getenv("DCS_RPC"); u != "" {
-			p.RPCURL = u
-		} else {
-			p.RPCURL = "https://api.testnet.iota.cafe:443"
-		}
-	}
-
-	// Fetch ground control info from API server
-	gcInfo, err := GetGroundControlInfo()
-	if err != nil {
-		return p, fmt.Errorf("failed to get ground control info: %w", err)
-	}
-
-	// Use API values unless overridden by flags/env
-	if p.GasID == "" {
-		p.GasID = gcInfo.WalletGasID
-	}
-
-	p.SignerAddress = strings.ToLower(gcInfo.Address)
-	p.PrivateKey = gcInfo.PrivateKey
-
-	return p, nil
 }
 
 func AddToWhitelist(ctx context.Context, p AddParams) (out []byte, already bool, err error) {

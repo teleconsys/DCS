@@ -3,6 +3,7 @@ package rebased
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,8 +35,89 @@ func Bech32ToKeystoreB64(bech string) (string, error) {
 	return base64.StdEncoding.EncodeToString(raw), nil // base64(flag||priv)
 }
 
-// SignTxBytes signs raw tx bytes using either a bech32 key string (iotaprivkey1.../suiprivkey1...)
-// or a keystore base64 string (flag||priv). Returns the base64 SerializedSignature.
+// HexToKeystoreB64 converts hex seed/private key into base64 keystore [0x00|seed32].
+// Accepts:
+// - 32B seed hex (64 chars)
+// - 64B ed25519 private key hex (128 chars) where first 32 bytes are the seed
+func HexToKeystoreB64(h string) (string, error) {
+	s := strings.TrimSpace(h)
+	s = strings.Trim(s, `"'`) // allow quoted
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = strings.TrimPrefix(s, "0x")
+
+	if !looksLikeHexKey(s) {
+		return "", fmt.Errorf("not a supported hex key")
+	}
+
+	raw, err := hex.DecodeString(s)
+	if err != nil {
+		return "", fmt.Errorf("hex decode: %w", err)
+	}
+
+	switch len(raw) {
+	case 32:
+		// seed
+		buf := append([]byte{0x00}, raw...)
+		return base64.StdEncoding.EncodeToString(buf), nil
+	case 64:
+		// ed25519.PrivateKey = seed(32) || pub(32)
+		seed := raw[:32]
+		buf := append([]byte{0x00}, seed...)
+		return base64.StdEncoding.EncodeToString(buf), nil
+	default:
+		return "", fmt.Errorf("hex key must be 32B seed or 64B ed25519 private key (got %d bytes)", len(raw))
+	}
+}
+
+func looksLikeHexKey(s string) bool {
+	if len(s) != 64 && len(s) != 128 {
+		return false
+	}
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
+			return false
+		}
+	}
+	return true
+}
+
+// KeyStringToKeystoreB64 normalizes key strings into base64 keystore format.
+// Supports:
+// - iotaprivkey1... / suiprivkey1...
+// - base64 keystore (33B [0x00|seed])
+// - hex seed/private key (32B/64B)
+func KeyStringToKeystoreB64(key string) (string, error) {
+	s := strings.TrimSpace(key)
+	if s == "" {
+		return "", errors.New("empty key string")
+	}
+	s = strings.Trim(s, `"'`)
+
+	low := strings.ToLower(s)
+
+	// bech32
+	if strings.HasPrefix(low, "iotaprivkey1") || strings.HasPrefix(low, "suiprivkey1") {
+		return Bech32ToKeystoreB64(s)
+	}
+
+	// hex
+	if ks, err := HexToKeystoreB64(s); err == nil {
+		return ks, nil
+	}
+
+	// base64 keystore
+	raw, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return "", fmt.Errorf("key is not bech32/hex/base64 keystore: %w", err)
+	}
+	if len(raw) != 33 || raw[0] != 0x00 {
+		return "", fmt.Errorf("keystore base64 must be 33B [0x00|32B], got %d (flag=%#02x)", len(raw), raw[0])
+	}
+	return s, nil
+}
+
+// SignTxBytes signs raw tx bytes using a key string.
+// Supported key types for conversion are: bech32, base64 keystore, or hex.
 func SignTxBytes(ctx context.Context, txBytes []byte, key any) (string, error) {
 	select {
 	case <-ctx.Done():
@@ -46,47 +128,29 @@ func SignTxBytes(ctx context.Context, txBytes []byte, key any) (string, error) {
 	var ksB64 string
 	switch v := key.(type) {
 	case string:
-		s := strings.TrimSpace(v)
-		if s == "" {
-			return "", errors.New("empty key string")
+		k, err := KeyStringToKeystoreB64(v)
+		if err != nil {
+			return "", err
 		}
-		if strings.HasPrefix(strings.ToLower(s), "iotaprivkey1") || strings.HasPrefix(strings.ToLower(s), "suiprivkey1") {
-			k, err := Bech32ToKeystoreB64(s)
-			if err != nil {
-				return "", err
-			}
-			ksB64 = k
-		} else {
-			// assume keystore base64; quick sanity: must decode to 33 bytes
-			raw, err := base64.StdEncoding.DecodeString(s)
-			if err != nil {
-				return "", fmt.Errorf("key is not bech32 nor base64 keystore: %w", err)
-			}
-			if len(raw) != 33 || raw[0] != 0x00 {
-				return "", fmt.Errorf("keystore base64 must be 33B [0x00|32B], got %d (flag=%#02x)", len(raw), raw[0])
-			}
-			ksB64 = s
-		}
+		ksB64 = k
 	default:
-		return "", fmt.Errorf("unsupported key type %T (need string bech32 or base64 keystore)", key)
+		return "", fmt.Errorf("unsupported key type %T (need string)", key)
 	}
 
-	// Load account from keystore
 	acc, err := suiaccount.NewAccountWithKeystore(ksB64)
 	if err != nil {
 		return "", fmt.Errorf("load account from keystore: %w", err)
 	}
 
-	// Intent: TransactionData scope
 	intent := suitypes.Intent{
 		Scope: suitypes.IntentScope{
-			TransactionData: &lib.EmptyEnum{}, // user signature over tx data
+			TransactionData: &lib.EmptyEnum{},
 		},
 		Version: suitypes.IntentVersion{
-			V0: &lib.EmptyEnum{}, // intent version = v0
+			V0: &lib.EmptyEnum{},
 		},
 		AppId: suitypes.AppId{
-			Sui: &lib.EmptyEnum{}, // app-id domain = Sui
+			Sui: &lib.EmptyEnum{},
 		},
 	}
 
@@ -95,22 +159,11 @@ func SignTxBytes(ctx context.Context, txBytes []byte, key any) (string, error) {
 		return "", fmt.Errorf("sign: %w", err)
 	}
 
-	// Extract base64 serialized signature string:
-	// Signature JSON is a one-key object like {"Ed25519SuiSignature":"<b64>"}.
 	b, _ := json.Marshal(sig)
-	var s string
-	if err := json.Unmarshal(b, &s); err == nil && s != "" {
-		return s, nil
+	var out string
+	if err := json.Unmarshal(b, &out); err == nil && out != "" {
+		return out, nil
 	}
 
-	// var m map[string]string
-	// if err := json.Unmarshal(b, &m); err != nil {
-	// 	return "", fmt.Errorf("encode signature: %w", err)
-	// }
-	// for _, v := range m {
-	// 	if v != "" {
-	// 		return v, nil
-	// 	}
-	// }
 	return "", errors.New("empty signature after marshal")
 }

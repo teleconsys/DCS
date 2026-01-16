@@ -203,3 +203,29 @@ func Dial(rpcURL string) (*Wrapper, error) {
 	}
 	return New(rpc), nil
 }
+
+type Coin struct {
+	CoinType            string `json:"coinType"`
+	CoinObjectID        string `json:"coinObjectId"`
+	Version             string `json:"version"`
+	Digest              string `json:"digest"`
+	Balance             string `json:"balance"`
+	PreviousTransaction string `json:"previousTransaction"`
+}
+
+type CoinPage struct {
+	Data        []Coin  `json:"data"`
+	HasNextPage bool    `json:"hasNextPage"`
+	NextCursor  *string `json:"nextCursor"`
+}
+
+func (w *Wrapper) GetAllCoins(ctx context.Context, owner string, cursor *string, limit uint64) (*CoinPage, error) {
+	if limit == 0 {
+		limit = 50
+	}
+	var out CoinPage
+	if err := w.call(ctx, &out, "iotax_getAllCoins", owner, cursor, limit); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}

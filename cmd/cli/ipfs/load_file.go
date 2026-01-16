@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/teleconsys/DCS/internal/ipfsutil"
 )
 
 func newLoadFileCmd() *cobra.Command {
@@ -19,7 +20,7 @@ func newLoadFileCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
 			cmd.Printf("Loading %s into IPFS …\n", filePath)
-			
+
 			// Get file size for display
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
@@ -27,7 +28,7 @@ func newLoadFileCmd() *cobra.Command {
 				return err
 			}
 			cmd.Printf("File size: %d bytes\n", fileInfo.Size())
-			
+
 			// TODO: add symmetric key management
 			// // Generate a random AES256 key
 			// key := make([]byte, 32) // AES256 requires 32 bytes
@@ -35,28 +36,28 @@ func newLoadFileCmd() *cobra.Command {
 			// 	cmd.PrintErrf("Failed to generate encryption key: %v\n", err)
 			// 	return err
 			// }
-			
+
 			// // Encrypt the file content
 			// encryptedContent, err := encryptAES256(fileContent, key)
 			// if err != nil {
 			// 	cmd.PrintErrf("Failed to encrypt file: %v\n", err)
 			// 	return err
 			// }
-			
+
 			// cmd.Printf("Encrypted content size: %d bytes\n", len(encryptedContent))
-			
+
 			// Load the file into IPFS using the utility function
-			ipfsPath, err := LoadFileToIPFS(filePath)
+			ipfsPath, err := ipfsutil.LoadFileToIPFS(filePath)
 			if err != nil {
 				cmd.PrintErrf("Failed to load file to IPFS: %v\n", err)
 				return err
 			}
-			
+
 			cmd.Printf("✅ File successfully uploaded to IPFS\n")
 			cmd.Printf("📁 IPFS Path: %s\n", ipfsPath)
 			// cmd.Printf("🔑 Encryption Key (hex): %x\n", key)
 			// cmd.Printf("⚠️  Store this key securely to decrypt the file later!\n")
-			
+
 			return nil
 		},
 	}
@@ -68,17 +69,17 @@ func encryptAES256(plaintext []byte, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
-	
+
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GCM: %w", err)
 	}
-	
+
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, fmt.Errorf("failed to generate nonce: %w", err)
 	}
-	
+
 	ciphertext := gcm.Seal(nonce, nonce, plaintext, nil)
 	return ciphertext, nil
 }

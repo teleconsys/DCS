@@ -134,7 +134,7 @@ func newAccountCmd() *cobra.Command {
 	newCmd.Flags().BoolVar(&noFaucet, "no_faucet", false, "Do not call the faucet even if FAUCET_URL is set")
 	newCmd.Flags().Uint64Var(&faucetAmount, "faucet-amount", 0, "Optional amount to request from faucet")
 
-	cmd.AddCommand(newCmd)
+	cmd.AddCommand(newCmd, newAccountCoinsCmd())
 	return cmd
 }
 

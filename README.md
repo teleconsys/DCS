@@ -58,12 +58,12 @@ Replace them with your own identities for real testing.
 
 Create your own `.env` by copying `.env.example`:
 
-Windows (PowerShell):
-```
+Windows:
+```powershell
 copy .env.example .env
 ```
-Linux (bash):
-```
+Linux:
+```bash
 cp .env.example .env
 ```
 Then edit .env and set the values you need.
@@ -84,14 +84,14 @@ Private keys:
         base64 keystore format (33 bytes: [0x00 | 32-byte seed] encoded as base64)
 
 ### 3) Run
-Windows (PowerShell):
-```
+Windows:
+```powershell
 cd C:\DCS
 .\dcs.exe --help
 .\dcs.exe iota_sc --help
 ```
-Linux(bash):
-```
+Linux:
+```bash
 cd ~/dcs
 chmod +x ./dcs
 ./dcs --help
@@ -100,7 +100,7 @@ chmod +x ./dcs
 ---
 ## Run from source:
 ### Clone the repository 
-```
+```bash
 git clone https://github.com/teleconsys/DCS
 cd DCS
 go run ./cmd/cli --help
@@ -108,11 +108,11 @@ go run ./cmd/cli iota_sc --help
 ```
 Build local binaries
 Linux:
-```
+```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o dcs ./cmd/cli
 ```
 Windows:
-```
+```powershell
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o dcs.exe ./cmd/cli
 ```
 

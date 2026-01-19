@@ -586,7 +586,7 @@ This section prepares the environment for the full CID lifecycle scenario:
 ### 5.0.1. Create User Account (user)
 
 ```powershell
-./dcs iota_sc account new --alias test --faucet
+./dcs iota_sc account new --alias test 
 ```
 **Note:**
 - Creates `./accounts/test.json` in the current working directory
@@ -601,7 +601,7 @@ This section prepares the environment for the full CID lifecycle scenario:
 
 ### 5.0.3. Create Provider Account (provider) (optional)
 ```powershell
-./dcs iota_sc account new --alias provider --faucet
+./dcs iota_sc account new --alias provider 
 ```
 **Notes:**
 - Optional: only needed if you want to test the full provider flow using a fresh provider account
@@ -724,5 +724,6 @@ $env:ACTIVE_GAS_COIN_ID="<PROVIDER_GAS_COIN_ID>"
 - Execute after the ex-current epoch (now previous epoch) has ended and before transitioning to the next one
 - This command only withdraws from the first honored offer on that CID. If multiple honored offers were active for that CID, withdraw must be call multiple times.
 - After the command, the offer is in the **previous** epoch, with `approved: true`, `honored: true`, `paid: true`
+
 
 

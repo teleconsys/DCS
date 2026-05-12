@@ -167,6 +167,40 @@ func FirstNonEmpty(vals ...string) string {
 	return ""
 }
 
+// ResolvePrivateKeyStrict validates a private key without ever prompting stdin.
+// Used by non-interactive callers (e.g. the GUI) that must fail fast instead of blocking.
+func ResolvePrivateKeyStrict(value string) (string, error) {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return "", errors.New("private key is empty")
+	}
+	if err := validatePrivateKeyFormat(v); err != nil {
+		return "", err
+	}
+	return v, nil
+}
+
+// ResolveSignerAddressStrict derives the address from the private key and, if a
+// provided address is non-empty, returns an error on mismatch instead of prompting
+// stdin. Intended for non-interactive callers (e.g. the GUI).
+func ResolveSignerAddressStrict(privKey, providedAddr string) (string, error) {
+	derivedAddr, err := PrivateKeyToAddress(privKey)
+	if err != nil {
+		return "", fmt.Errorf("error deriving address from private key: %w", err)
+	}
+	addr := strings.TrimSpace(providedAddr)
+	if addr == "" {
+		return derivedAddr, nil
+	}
+	if strings.EqualFold(derivedAddr, addr) {
+		return derivedAddr, nil
+	}
+	return "", fmt.Errorf(
+		"address mismatch: private key address (%s) does not match provided address (%s)",
+		derivedAddr, addr,
+	)
+}
+
 // ResolveGasCoinId resolves the gas coin ID to use for a transaction and verifies ownership.
 func ResolveGasCoinId(ctx context.Context, flagValue string, signerAddress string, rpcURL string, envVars ...string) (string, error) {
 	var envValues []string

@@ -105,21 +105,21 @@ func (b *AppBar) pingNow(rpcURL string) {
 
 	rpcURL = strings.TrimSpace(rpcURL)
 	if rpcURL == "" {
-		fyne.Do(func() { b.setConn(stateBad, "no RPC") })
+		b.setConn(stateBad, "no RPC")
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	w, err := rebased.Dial(rpcURL)
 	if err != nil {
-		fyne.Do(func() { b.setConn(stateBad, "dial failed") })
+		b.setConn(stateBad, "dial failed")
 		return
 	}
 	if _, err := w.Ping(ctx); err != nil {
-		fyne.Do(func() { b.setConn(stateBad, "unreachable") })
+		b.setConn(stateBad, "unreachable")
 		return
 	}
-	fyne.Do(func() { b.setConn(stateOK, "connected") })
+	b.setConn(stateOK, "connected")
 }
 
 type connState int
@@ -137,14 +137,16 @@ var (
 )
 
 func (b *AppBar) setConn(state connState, msg string) {
-	switch state {
-	case stateOK:
-		b.connDot.FillColor = okDot
-	case stateBad:
-		b.connDot.FillColor = badDot
-	default:
-		b.connDot.FillColor = neutralDot
-	}
-	b.connDot.Refresh()
-	b.connLbl.SetText(msg)
+	fyne.Do(func() {
+		switch state {
+		case stateOK:
+			b.connDot.FillColor = okDot
+		case stateBad:
+			b.connDot.FillColor = badDot
+		default:
+			b.connDot.FillColor = neutralDot
+		}
+		b.connDot.Refresh()
+		b.connLbl.SetText(msg)
+	})
 }

@@ -43,16 +43,18 @@ var (
 	colorWarning = color.NRGBA{R: 0xF5, G: 0x9E, B: 0x0B, A: 0xFF}
 	colorError   = color.NRGBA{R: 0xEF, G: 0x44, B: 0x44, A: 0xFF}
 
-	// Surface palette — neutral dark canvas with raised surface for cards.
-	colorBackground      = color.NRGBA{R: 0x0F, G: 0x17, B: 0x21, A: 0xFF} // slate-900
-	colorSurface         = color.NRGBA{R: 0x1E, G: 0x29, B: 0x3B, A: 0xFF} // slate-800
-	colorSurfaceRaised   = color.NRGBA{R: 0x17, G: 0x20, B: 0x32, A: 0xFF}
+	// Surface palette — stepped neutrals so sections read clearly against the base canvas.
+	colorBackground      = color.NRGBA{R: 0x0B, G: 0x12, B: 0x1C, A: 0xFF}
+	colorSurface         = color.NRGBA{R: 0x17, G: 0x22, B: 0x32, A: 0xFF}
+	colorSurfaceRaised   = color.NRGBA{R: 0x1E, G: 0x2A, B: 0x3D, A: 0xFF}
+	colorCardInterior    = color.NRGBA{R: 0x1A, G: 0x26, B: 0x38, A: 0xFF}
+	colorCardStroke      = color.NRGBA{R: 0x3D, G: 0x4D, B: 0x64, A: 0xFF}
 	colorOverlay         = color.NRGBA{R: 0x0B, G: 0x11, B: 0x1A, A: 0xCC}
-	colorForeground      = color.NRGBA{R: 0xE2, G: 0xE8, B: 0xF0, A: 0xFF} // slate-200
-	colorMutedForeground = color.NRGBA{R: 0x94, G: 0xA3, B: 0xB8, A: 0xFF} // slate-400
-	colorDisabled        = color.NRGBA{R: 0x64, G: 0x74, B: 0x8B, A: 0xFF} // slate-500
-	colorSeparator       = color.NRGBA{R: 0x33, G: 0x44, B: 0x56, A: 0xFF}
-	colorScrollBar       = color.NRGBA{R: 0x47, G: 0x5A, B: 0x6E, A: 0xCC}
+	colorForeground      = color.NRGBA{R: 0xE2, G: 0xE8, B: 0xF0, A: 0xFF}
+	colorMutedForeground = color.NRGBA{R: 0x94, G: 0xA3, B: 0xB8, A: 0xFF}
+	colorDisabled        = color.NRGBA{R: 0x64, G: 0x74, B: 0x8B, A: 0xFF}
+	colorSeparator       = color.NRGBA{R: 0x4A, G: 0x5A, B: 0x72, A: 0xFF}
+	colorScrollBar       = color.NRGBA{R: 0x55, G: 0x67, B: 0x7D, A: 0xCC}
 	colorShadow          = color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x88}
 )
 
@@ -149,9 +151,20 @@ func (t *Theme) Icon(name fyne.ThemeIconName) fyne.Resource {
 func (t *Theme) Size(name fyne.ThemeSizeName) float32 {
 	switch name {
 	case ftheme.SizeNamePadding:
-		return 6
+		return 10
+	case ftheme.SizeNameInnerPadding:
+		return 8
+	case ftheme.SizeNameSeparatorThickness:
+		return 2
 	case ftheme.SizeNameInlineIcon:
 		return 18
 	}
 	return ftheme.DefaultTheme().Size(name)
 }
+
+// CardInteriorFill is the panel fill drawn behind card bodies for separation
+// from the window background.
+func CardInteriorFill() color.Color { return colorCardInterior }
+
+// CardInteriorStroke is the subtle outline around card panels.
+func CardInteriorStroke() color.Color { return colorCardStroke }

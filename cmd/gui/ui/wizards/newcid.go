@@ -21,11 +21,11 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 )
 
-// NewCIDWizard launches the "Upload new content" wizard. It walks the
+// NewCIDWizard launches the "Create new CID" wizard. It walks the
 // user through (1) source — upload file or paste CID — (2) epochs (with
-// auto default), (3) initial budget, then (4) submits the on-chain
-// pipeline via service.CIDCreate. Steps are presented as labeled
-// sections in a single scrollable form to keep the implementation
+// auto default), (3) initial budget, then submits the on-chain pipeline
+// via service.CIDCreate when the user confirms. Steps are presented as
+// labeled sections in a single scrollable form to keep the implementation
 // straightforward across Fyne versions.
 //
 // onDone runs after a successful creation so the caller can refresh
@@ -107,13 +107,10 @@ func NewCIDWizard(vc *ui.ViewContext, onDone func()) {
 		widget.NewSeparator(),
 		stepHdr("Step 3 — Initial budget"),
 		widget.NewForm(widget.NewFormItem("Amount (nanos)", amount)),
-		widget.NewSeparator(),
-		stepHdr("Step 4 — Review & submit"),
-		widget.NewLabel("Click Create to upload (if needed), create the CID object on chain, and register it."),
 	)
 	scroll := container.NewVScroll(formBody)
 
-	d := dialog.NewCustomConfirm("Upload new content", "Create", "Cancel", scroll,
+	d := dialog.NewCustomConfirm("Create new CID", "Create", "Cancel", scroll,
 		func(ok bool) {
 			if !ok {
 				return
@@ -132,13 +129,13 @@ func NewCIDWizard(vc *ui.ViewContext, onDone func()) {
 					return
 				}
 				fyne.Do(func() {
+					if onDone != nil {
+						onDone()
+					}
 					dialog.ShowInformation("CID created",
 						fmt.Sprintf("CID %s\nObject %s", res.CIDStr, res.CIDID),
 						vc.Window)
 				})
-				if onDone != nil {
-					onDone()
-				}
 			}()
 		}, vc.Window)
 	d.Resize(fyne.NewSize(720, 620))

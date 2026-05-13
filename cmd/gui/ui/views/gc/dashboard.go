@@ -13,12 +13,13 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/teleconsys/DCS/cmd/gui/service"
+	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
 )
 
-// Dashboard is the Ground Control whitelist: title, member list with
-// delete per row, and Add opening the same modal as before.
+// Dashboard is the Ground Control whitelist: members table with delete per row,
+// status and Add, inside a Whitelist section card.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
 	return container.NewStack(buildWhitelistView(vc))
 }
@@ -114,15 +115,13 @@ func buildWhitelistView(vc *ui.ViewContext) fyne.CanvasObject {
 			}, vc.Window)
 	}
 
-	title := widget.NewLabelWithStyle("Whitelist", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	addBtn := widget.NewButtonWithIcon("Add", ftheme.ContentAddIcon(), openAdd)
 	addBtn.Importance = widget.HighImportance
 
-	header := container.NewBorder(nil, nil, title, addBtn, nil)
-	top := container.NewVBox(header, widget.NewSeparator(), statusLbl)
-
+	header := container.NewBorder(nil, nil, statusLbl, addBtn, nil)
+	top := container.NewVBox(header)
 	body := container.NewBorder(top, nil, nil, nil, table.CanvasObject())
 	refresh()
 
-	return container.NewPadded(body)
+	return components.CardStretch(theme.AccentGC.Primary, "Whitelist", "", body)
 }

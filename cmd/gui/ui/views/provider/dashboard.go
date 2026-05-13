@@ -22,16 +22,16 @@ import (
 	"github.com/teleconsys/DCS/internal/offers"
 )
 
-// Dashboard is the Provider workspace: a vertical split between "Open offer windows"
-// (discovery + submit) and "My offers" (status + withdraw).
+// Dashboard is the Provider workspace: "Open offer windows" and "My offers"
+// side by side with a draggable split between them.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
 	windows := buildOpenWindowsCard(vc)
 	mine := buildMyOffersCard(vc)
 
-	bottom := container.NewVSplit(windows, mine)
-	bottom.SetOffset(0.55)
+	split := container.NewHSplit(windows, mine)
+	split.SetOffset(0.52)
 
-	return container.NewStack(bottom)
+	return container.NewStack(split)
 }
 
 // ---- open offer windows ---------------------------------------------------
@@ -151,7 +151,7 @@ func buildOpenWindowsCard(vc *ui.ViewContext) fyne.CanvasObject {
 
 	return components.CardStretch(theme.AccentProvider.Primary,
 		"Open offer windows",
-		"CIDs accepting storage offers right now",
+		"",
 		body,
 	)
 }
@@ -259,7 +259,7 @@ func buildMyOffersCard(vc *ui.ViewContext) fyne.CanvasObject {
 
 	return components.CardStretch(theme.AccentProvider.Primary,
 		"My offers",
-		"Offers you've submitted as Provider — withdraw payment once honored",
+		"",
 		body,
 	)
 }

@@ -21,11 +21,16 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/ui/wizards"
 )
 
+// railMinUserPane is the minimum size of the right-hand scroll (IPFS | Tools split).
+// Height leaves a workable area for the vertical split between the two cards.
+var railMinUserPane = fyne.NewSize(400, 480)
+var railMinUserPaneDemo = fyne.NewSize(176, 300)
+
 // clampMinWLayout reports a fixed minimum width (while keeping the child's
 // natural height) but always lays out the child to the full allocated size.
 // This works around fyne's VScroll: MinSize width becomes max(SetMinSize,
 // content.MinSize), so wide IPFS/Tools cards would otherwise force the rail
-// to stay huge and block the rail | My CIDs split in narrow Demo panes.
+// to stay huge and block the My CIDs | rail split in narrow Demo panes.
 type clampMinWLayout struct {
 	MinW float32
 }
@@ -46,24 +51,25 @@ func (l clampMinWLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 	objects[0].Move(fyne.NewPos(0, 0))
 }
 
-// userDashboardOpts tweaks inner layout while keeping the main rail | My CIDs split.
+// userDashboardOpts tweaks inner layout while keeping the main My CIDs | rail split.
 type userDashboardOpts struct {
 	cidGridCols    int  // AdaptiveGrid column count for CID tiles (Demo uses 1).
 	stackIPFSTools bool // when true, IPFS and Tools stack vertically instead of side-by-side.
 	// compactSplitMins lowers rail and CID scroll minimum sizes so the HSplit
-	// between rail and My CIDs stays draggable when the User pane is only
+	// between My CIDs and the rail stays draggable when the User pane is only
 	// half the window (Demo tab).
 	compactSplitMins bool
 }
 
-// Dashboard is the User workspace: left rail (Upload, then IPFS and Tools)
-// beside the My CIDs grid, with a draggable split between rail and grid.
+// Dashboard is the User workspace: My CIDs on the left (Add in the card header),
+// IPFS and Tools on the right in a vertical split (draggable divider), and an HSplit
+// between those panes.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	return buildUserDashboard(vc, userDashboardOpts{cidGridCols: 2, stackIPFSTools: false})
+	return buildUserDashboard(vc, userDashboardOpts{cidGridCols: 2, stackIPFSTools: true})
 }
 
-// DashboardForDemo is like Dashboard but stacks IPFS/Tools vertically and lists
-// CID tiles in a single column — for the Demo tab while preserving the rail | grid split.
+// DashboardForDemo is like Dashboard but lists CID tiles in a single column and
+// uses compact split minimums — for the Demo tab while preserving the My CIDs | rail split.
 func DashboardForDemo(vc *ui.ViewContext) fyne.CanvasObject {
 	return buildUserDashboard(vc, userDashboardOpts{
 		cidGridCols:      1,
@@ -77,32 +83,32 @@ func buildUserDashboard(vc *ui.ViewContext, opts userDashboardOpts) fyne.CanvasO
 	if opts.compactSplitMins {
 		cidScrollMin = fyne.NewSize(120, 96)
 	}
-	grid, refreshGrid := buildMyCIDsCard(vc, opts.cidGridCols, cidScrollMin)
-	hero := buildHero(vc, refreshGrid)
+	grid, _ := buildMyCIDsCard(vc, opts.cidGridCols, cidScrollMin)
 	ipfs := buildIPFSSection(vc)
 	tools := buildTools(vc)
 
 	var ipfsTools fyne.CanvasObject
 	if opts.stackIPFSTools {
-		ipfsTools = container.NewVBox(ipfs, tools)
+		// VSplit divides rail height; CardStretch fills each half; tab bodies use
+		// ui.TopBound inside VScroll so short forms are not stretched with empty space below.
+		ipfsTools = container.NewVSplit(
+			container.NewMax(ipfs),
+			container.NewMax(tools),
+		)
 	} else {
 		ipfsTools = container.NewGridWithColumns(2, ipfs, tools)
 	}
 
-	sidebar := container.NewVBox(
-		hero,
-		widget.NewSeparator(),
-		ipfsTools,
-	)
+	sidebar := container.NewVBox(ipfsTools)
 	var railScroll fyne.CanvasObject
 	if opts.compactSplitMins {
 		railCore := container.New(clampMinWLayout{MinW: 176}, sidebar)
 		sc := container.NewVScroll(railCore)
-		sc.SetMinSize(fyne.NewSize(176, 120))
+		sc.SetMinSize(railMinUserPaneDemo)
 		railScroll = sc
 	} else {
 		sc := container.NewVScroll(sidebar)
-		sc.SetMinSize(fyne.NewSize(400, 280))
+		sc.SetMinSize(railMinUserPane)
 		railScroll = sc
 	}
 
@@ -111,26 +117,13 @@ func buildUserDashboard(vc *ui.ViewContext, opts userDashboardOpts) fyne.CanvasO
 	}
 
 	split := container.NewHSplit(
-		container.NewPadded(railScroll),
 		grid,
+		container.NewPadded(railScroll),
 	)
-	split.SetOffset(0.38)
+	// Offset is the fraction for the first child (My CIDs); mirror the old 0.38 rail share.
+	split.SetOffset(0.62)
 
 	return container.NewStack(split)
-}
-
-// ---- hero CTA -------------------------------------------------------------
-
-func buildHero(vc *ui.ViewContext, onCreated func()) fyne.CanvasObject {
-	cta := widget.NewButtonWithIcon("+ Upload new content", ftheme.UploadIcon(), func() {
-		wizards.NewCIDWizard(vc, onCreated)
-	})
-	cta.Importance = widget.HighImportance
-
-	hint := widget.NewLabel("IPFS pin, on-chain CID, and storage budget — one flow.")
-	hint.Wrapping = fyne.TextWrapWord
-
-	return components.Card(theme.AccentUser.Primary, "Upload", "", container.NewVBox(hint), cta)
 }
 
 // ---- My CIDs grid ---------------------------------------------------------
@@ -150,9 +143,9 @@ func buildMyCIDsCard(vc *ui.ViewContext, gridCols int, cidScrollMin fyne.Size) (
 
 	statusLbl := widget.NewLabel("0 CIDs")
 	emptyLbl := components.EmptyState(
-		ftheme.UploadIcon(),
+		ftheme.ContentAddIcon(),
 		"No CIDs yet",
-		"Use Upload (left) to add your first CID.",
+		"Use Add (above) to create your first CID.",
 		"", nil,
 	)
 	host := container.NewMax(emptyLbl)
@@ -191,8 +184,14 @@ func buildMyCIDsCard(vc *ui.ViewContext, gridCols int, cidScrollMin fyne.Size) (
 		}()
 	}
 
+	addBtn := widget.NewButtonWithIcon("Add", ftheme.ContentAddIcon(), func() {
+		wizards.NewCIDWizard(vc, refresh)
+	})
+	addBtn.Importance = widget.HighImportance
+
 	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
-	header := container.NewBorder(nil, nil, statusLbl, refreshBtn)
+	headerRight := container.NewHBox(addBtn, refreshBtn)
+	header := container.NewBorder(nil, nil, statusLbl, headerRight)
 	body := container.NewBorder(header, nil, nil, nil, host)
 
 	refresh()
@@ -490,8 +489,7 @@ func runOfferIndex(vc *ui.ViewContext, sum service.CIDSummary, o service.OfferRo
 
 func buildIPFSSection(vc *ui.ViewContext) fyne.CanvasObject {
 	makeTab := func(label string, builder ui.View) *container.TabItem {
-		body := container.NewVScroll(builder(vc))
-		body.SetMinSize(fyne.NewSize(140, 200))
+		body := container.NewVScroll(ui.TopBound(builder(vc)))
 		return container.NewTabItem(label, body)
 	}
 	tabs := container.NewAppTabs(
@@ -500,15 +498,14 @@ func buildIPFSSection(vc *ui.ViewContext) fyne.CanvasObject {
 		makeTab("Check pins", IPFSCheckPinsView),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
-	return components.Card(theme.AccentUser.Primary, "IPFS", "", tabs)
+	return components.CardStretch(theme.AccentUser.Primary, "IPFS", "", tabs)
 }
 
 // ---- tools section --------------------------------------------------------
 
 func buildTools(vc *ui.ViewContext) fyne.CanvasObject {
 	makeTab := func(label string, builder ui.View) *container.TabItem {
-		body := container.NewVScroll(builder(vc))
-		body.SetMinSize(fyne.NewSize(140, 200))
+		body := container.NewVScroll(ui.TopBound(builder(vc)))
 		return container.NewTabItem(label, body)
 	}
 	tabs := container.NewAppTabs(
@@ -519,7 +516,7 @@ func buildTools(vc *ui.ViewContext) fyne.CanvasObject {
 		makeTab("Whitelist has?", WhitelistHasView),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
-	return components.Card(theme.AccentUser.Primary, "Tools", "", tabs)
+	return components.CardStretch(theme.AccentUser.Primary, "Tools", "", tabs)
 }
 
 // ---- helpers --------------------------------------------------------------

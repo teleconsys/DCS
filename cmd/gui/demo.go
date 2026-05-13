@@ -62,7 +62,7 @@ func (demoHostLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 
 // buildDemo lays out User and Provider side-by-side. The User side uses
 // DashboardForDemo: single-column CID tiles and IPFS/Tools stacked vertically,
-// while keeping the usual rail | My CIDs split.
+// while keeping the usual My CIDs | rail split.
 func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*shell.ActorShell) fyne.CanvasObject {
 	userVC := shells[state.ActorUser].NewViewContext(win, app)
 	provVC := shells[state.ActorProvider].NewViewContext(win, app)

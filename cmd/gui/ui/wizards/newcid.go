@@ -131,9 +131,6 @@ func NewCIDWizard(vc *ui.ViewContext, onDone func()) {
 					fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 					return
 				}
-				if res.CIDID != "" && vc.OnDigest != nil {
-					vc.OnDigest(res.CIDID)
-				}
 				fyne.Do(func() {
 					dialog.ShowInformation("CID created",
 						fmt.Sprintf("CID %s\nObject %s", res.CIDStr, res.CIDID),

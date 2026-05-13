@@ -11,7 +11,7 @@ import (
 // OpenIdentity displays the identity panel for the given actor in a
 // modal sheet. The panel mutates the live ActorProfile in place; the
 // onChange callback runs whenever any field changes so the AppBar can
-// re-render the wallet pill in real time.
+// refresh actor-specific chrome (for example the Identity caption).
 func OpenIdentity(win fyne.Window, app *state.AppState, actor state.Actor, onChange func()) {
 	p := app.Registry.Profile(actor)
 	panel := ui.NewIdentityPanel(win, p, onChange)

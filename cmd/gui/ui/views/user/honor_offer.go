@@ -29,14 +29,11 @@ func HonorOfferView(vc *ui.ViewContext) fyne.CanvasObject {
 		func() error { return cidID.Validate() },
 		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
 			i, _ := ui.ParseUint64(idx.Text)
-			digest, err := service.HonorOffer(ctx, snap, service.OfferIndexForm{
+			_, err := service.HonorOffer(ctx, snap, service.OfferIndexForm{
 				CIDObjectID: cidID.Text,
 				Index:       i,
 				Debug:       debug.Checked,
 			}, out)
-			if err == nil && digest != "" && vc.OnDigest != nil {
-				vc.OnDigest(digest)
-			}
 			return err
 		})
 	return container.NewVBox(ui.Card("Honor a confirmed offer", form), run)

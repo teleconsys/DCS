@@ -40,10 +40,7 @@ func CIDAddFundsView(vc *ui.ViewContext) fyne.CanvasObject {
 		},
 		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
 			amt, _ := ui.ParseUint64(amount.Text)
-			digest, err := service.CIDAddFunds(ctx, snap, cidID.Text, amt, out)
-			if err == nil && digest != "" && vc.OnDigest != nil {
-				vc.OnDigest(digest)
-			}
+			_, err := service.CIDAddFunds(ctx, snap, cidID.Text, amt, out)
 			return err
 		})
 	return container.NewVBox(ui.Card("Top up a CID storage budget", form), run)

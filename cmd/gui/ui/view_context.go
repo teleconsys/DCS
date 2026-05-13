@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"io"
+
 	"fyne.io/fyne/v2"
 
 	"github.com/teleconsys/DCS/cmd/gui/service"
@@ -12,12 +14,11 @@ import (
 // the identity panel are reflected), but each Run call should call
 // Profile.Clone() before handing off to a goroutine.
 type ViewContext struct {
-	Window   fyne.Window
-	Output   *OutputView
-	Runner   *service.Runner
-	Profile  *state.ActorProfile
-	App      *state.AppState
-	OnDigest func(digest string)
+	Window  fyne.Window
+	Output  io.Writer
+	Runner  *service.Runner
+	Profile *state.ActorProfile
+	App     *state.AppState
 }
 
 // Snapshot returns an immutable copy of the live profile, suitable for

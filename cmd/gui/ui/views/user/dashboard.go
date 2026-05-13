@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	ftheme "fyne.io/fyne/v2/theme"
@@ -20,105 +18,36 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
-	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
 	"github.com/teleconsys/DCS/cmd/gui/ui/wizards"
 )
 
-// Dashboard is the redesigned User workspace: wallet + whitelisted
-// strip on top, hero "+ Upload" CTA, then a tile grid of "My CIDs"
-// with per-tile actions, and a collapsed "Tools" accordion at the
-// bottom holding the residual utility actions.
+// Dashboard is the User workspace: left rail (Upload, then IPFS and Tools
+// as two equal columns) beside the My CIDs grid, with a draggable split
+// between the rail and the grid. IPFS/Tools use a grid instead of HSplit
+// so narrow panes do not collapse to unusable widths.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	// Top strip cards.
-	wallet, refreshWallet := buildWalletCard(vc)
-	// Grid + refresh handle (also fires when the wizard returns).
 	grid, refreshGrid := buildMyCIDsCard(vc)
-
-	hero := buildHero(vc, func() {
-		refreshGrid()
-		refreshWallet()
-	})
-
-	topStrip := container.NewGridWithColumns(1, wallet)
-	header := container.NewVBox(topStrip, hero)
-
+	hero := buildHero(vc, refreshGrid)
+	ipfs := buildIPFSSection(vc)
 	tools := buildTools(vc)
 
-	body := container.NewBorder(header, tools, nil, nil, grid)
-	return body
-}
+	ipfsTools := container.NewGridWithColumns(2, ipfs, tools)
 
-// ---- wallet card ----------------------------------------------------------
-
-func buildWalletCard(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
-	balLbl := widget.NewLabel("…")
-	wlDot := canvas.NewCircle(components.BadgeNeutral.Color())
-	wlDotBox := container.NewGridWrap(fyne.NewSize(12, 12), wlDot)
-	wlLbl := widget.NewLabel("checking…")
-
-	rows := container.NewVBox(
-		components.KeyValueRow(vc.Window, "Address", vc.Profile.Address, true),
-		components.KeyValueRow(vc.Window, "Gas coin", vc.Profile.GasCoinID, true),
-		container.NewHBox(
-			widget.NewLabelWithStyle("IOTA balance:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			balLbl,
-		),
-		container.NewHBox(
-			widget.NewLabelWithStyle("Whitelisted:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			wlDotBox,
-			wlLbl,
-		),
+	sidebar := container.NewVBox(
+		hero,
+		widget.NewSeparator(),
+		ipfsTools,
 	)
+	sidebarScroll := container.NewVScroll(sidebar)
+	sidebarScroll.SetMinSize(fyne.NewSize(400, 280))
 
-	refresh := func() {
-		go func() {
-			snap := vc.Snapshot()
-			if strings.TrimSpace(snap.Address) == "" {
-				fyne.Do(func() {
-					balLbl.SetText("(no address — open Identity)")
-					wlDot.FillColor = components.BadgeNeutral.Color()
-					wlDot.Refresh()
-					wlLbl.SetText("unknown")
-				})
-				return
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-			defer cancel()
+	split := container.NewHSplit(
+		container.NewPadded(sidebarScroll),
+		grid,
+	)
+	split.SetOffset(0.38)
 
-			bal, balErr := service.IOTABalance(ctx, snap.RPCURL, snap.Address)
-			fyne.Do(func() {
-				if balErr != nil {
-					balLbl.SetText("error: " + balErr.Error())
-				} else {
-					balLbl.SetText(fmt.Sprintf("%s IOTA  (%s nanos)", formatIOTA(bal), strconv.FormatUint(bal, 10)))
-				}
-			})
-
-			found, wlErr := service.WhitelistHas(ctx, snap, snap.Address, io.Discard)
-			fyne.Do(func() {
-				if wlErr != nil {
-					wlDot.FillColor = components.BadgeErr.Color()
-					wlLbl.SetText(wlErr.Error())
-				} else if found {
-					wlDot.FillColor = components.BadgeOK.Color()
-					wlLbl.SetText("yes — you can upload content")
-				} else {
-					wlDot.FillColor = components.BadgeWarn.Color()
-					wlLbl.SetText("no — ask GC to add you")
-				}
-				wlDot.Refresh()
-			})
-		}()
-	}
-
-	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
-	manageBtn := widget.NewButtonWithIcon("Manage identity", ftheme.AccountIcon(), func() {
-		shell.OpenIdentity(vc.Window, vc.App, vc.Profile.Actor, refresh)
-	})
-
-	refresh()
-	subtitle := "address " + components.Short(vc.Profile.Address)
-	return components.Card(theme.AccentUser.Primary, "My wallet", subtitle, rows, manageBtn, refreshBtn), refresh
+	return container.NewStack(split)
 }
 
 // ---- hero CTA -------------------------------------------------------------
@@ -129,26 +58,26 @@ func buildHero(vc *ui.ViewContext, onCreated func()) fyne.CanvasObject {
 	})
 	cta.Importance = widget.HighImportance
 
-	hint := widget.NewLabel("Pin a file to IPFS, register a CID object on chain, and seed it with an initial storage budget — all in one wizard.")
+	hint := widget.NewLabel("IPFS pin, on-chain CID, and storage budget — one flow.")
 	hint.Wrapping = fyne.TextWrapWord
 
-	return components.Card(theme.AccentUser.Primary,
-		"Upload content",
-		"",
-		container.NewVBox(hint),
-		cta,
-	)
+	return components.Card(theme.AccentUser.Primary, "Upload", "", container.NewVBox(hint), cta)
 }
 
 // ---- My CIDs grid ---------------------------------------------------------
 
 func buildMyCIDsCard(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
-	grid := container.NewGridWrap(fyne.NewSize(340, 260))
+	// Adaptive grid reflows columns with window width; scroll keeps MinSize bounded
+	// so many tiles do not force the window to grow vertically.
+	grid := container.NewAdaptiveGrid(2)
+	cidScroll := container.NewVScroll(grid)
+	cidScroll.SetMinSize(fyne.NewSize(220, 160))
+
 	statusLbl := widget.NewLabel("0 CIDs")
 	emptyLbl := components.EmptyState(
 		ftheme.UploadIcon(),
 		"No CIDs yet",
-		"Click \"+ Upload new content\" above to publish your first file.",
+		"Use Upload (left) to add your first CID.",
 		"", nil,
 	)
 	host := container.NewMax(emptyLbl)
@@ -179,7 +108,7 @@ func buildMyCIDsCard(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 				if len(cids) == 0 {
 					host.Objects = []fyne.CanvasObject{emptyLbl}
 				} else {
-					host.Objects = []fyne.CanvasObject{container.NewVScroll(grid)}
+					host.Objects = []fyne.CanvasObject{cidScroll}
 				}
 				host.Refresh()
 				statusLbl.SetText(fmt.Sprintf("%d CID(s)", len(cids)))
@@ -193,11 +122,7 @@ func buildMyCIDsCard(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 
 	refresh()
 
-	return components.CardStretch(theme.AccentUser.Primary,
-		"My CIDs",
-		"Content you've registered on chain",
-		body,
-	), refresh
+	return components.CardStretch(theme.AccentUser.Primary, "My CIDs", "", body), refresh
 }
 
 func buildCIDTile(vc *ui.ViewContext, sum service.CIDSummary, refresh func()) fyne.CanvasObject {
@@ -208,11 +133,16 @@ func buildCIDTile(vc *ui.ViewContext, sum service.CIDSummary, refresh func()) fy
 	now := time.Now().UnixMilli()
 	winLbl := widget.NewLabel(windowText(sum, now))
 	winLbl.Wrapping = fyne.TextWrapWord
-	balLbl := widget.NewLabel(fmt.Sprintf("Balance: %s nanos", strconv.FormatInt(sum.Balance, 10)))
-	offersLbl := widget.NewLabel(fmt.Sprintf("Offers · next %d  current %d  prev %d",
-		sum.NextOffers, sum.CurrentOffers, sum.PrevOffers))
+	var balReadable string
+	if sum.Balance >= 0 {
+		balReadable = formatIOTA(uint64(sum.Balance))
+	} else {
+		balReadable = strconv.FormatInt(sum.Balance, 10)
+	}
+	statsLbl := widget.NewLabel(fmt.Sprintf("%s IOTA · offers %d/%d/%d",
+		balReadable, sum.NextOffers, sum.CurrentOffers, sum.PrevOffers))
 
-	body := container.NewVBox(badge, cidLbl, winLbl, balLbl, offersLbl)
+	body := container.NewVBox(badge, cidLbl, winLbl, statsLbl)
 
 	addFunds := widget.NewButtonWithIcon("Add funds", ftheme.ContentAddIcon(), func() {
 		openAddFundsDialog(vc, sum, refresh)
@@ -251,20 +181,20 @@ func badgeStateForCID(s service.CIDStatus) components.BadgeState {
 
 func windowText(sum service.CIDSummary, nowMs int64) string {
 	if sum.CurrentEpochEnd == 0 {
-		return "no epoch data"
+		return "No epoch data"
 	}
 	switch sum.Status {
 	case service.CIDStatusPending:
 		mins := (sum.CurrentEpochEnd - nowMs) / 60_000
-		return fmt.Sprintf("Active until in %d min", mins)
+		return fmt.Sprintf("%d min left (active)", mins)
 	case service.CIDStatusOfferWindow:
 		mins := (sum.NextEpochStart - nowMs) / 60_000
-		return fmt.Sprintf("Offers open · next epoch starts in %d min", mins)
+		return fmt.Sprintf("Offers · next epoch in %d min", mins)
 	case service.CIDStatusNextScheduled:
 		mins := (sum.NextEpochEnd - nowMs) / 60_000
-		return fmt.Sprintf("Next epoch active for %d min", mins)
+		return fmt.Sprintf("Next epoch · %d min left", mins)
 	case service.CIDStatusExpired:
-		return "Expired — consider removing"
+		return "Expired"
 	}
 	return ""
 }
@@ -290,13 +220,10 @@ func openAddFundsDialog(vc *ui.ViewContext, sum service.CIDSummary, refresh func
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 				defer cancel()
-				digest, err := service.CIDAddFunds(ctx, vc.Snapshot(), sum.ID, amt, vc.Output)
+				_, err := service.CIDAddFunds(ctx, vc.Snapshot(), sum.ID, amt, vc.Output)
 				if err != nil {
 					fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 					return
-				}
-				if digest != "" && vc.OnDigest != nil {
-					vc.OnDigest(digest)
 				}
 				refresh()
 			}()
@@ -334,13 +261,10 @@ func openRemoveDialog(vc *ui.ViewContext, sum service.CIDSummary, refresh func()
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 				defer cancel()
-				digest, err := service.CIDRemove(ctx, vc.Snapshot(), sum.ID, vc.Output)
+				_, err := service.CIDRemove(ctx, vc.Snapshot(), sum.ID, vc.Output)
 				if err != nil {
 					fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 					return
-				}
-				if digest != "" && vc.OnDigest != nil {
-					vc.OnDigest(digest)
 				}
 				refresh()
 			}()
@@ -463,18 +387,15 @@ func runOfferIndex(vc *ui.ViewContext, sum service.CIDSummary, o service.OfferRo
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		var (
-			digest string
-			err    error
-		)
+		var err error
 		switch mode {
 		case "approve":
-			digest, err = service.ApproveOffer(ctx, vc.Snapshot(), service.OfferIndexForm{
+			_, err = service.ApproveOffer(ctx, vc.Snapshot(), service.OfferIndexForm{
 				CIDObjectID: sum.ID,
 				Index:       uint64(o.Index),
 			}, vc.Output)
 		case "honor":
-			digest, err = service.HonorOffer(ctx, vc.Snapshot(), service.OfferIndexForm{
+			_, err = service.HonorOffer(ctx, vc.Snapshot(), service.OfferIndexForm{
 				CIDObjectID: sum.ID,
 				Index:       uint64(o.Index),
 			}, vc.Output)
@@ -483,9 +404,6 @@ func runOfferIndex(vc *ui.ViewContext, sum service.CIDSummary, o service.OfferRo
 			fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 			return
 		}
-		if digest != "" && vc.OnDigest != nil {
-			vc.OnDigest(digest)
-		}
 		refresh()
 		if reload != nil {
 			reload()
@@ -493,28 +411,40 @@ func runOfferIndex(vc *ui.ViewContext, sum service.CIDSummary, o service.OfferRo
 	}()
 }
 
-// ---- tools disclosure -----------------------------------------------------
+// ---- IPFS section --------------------------------------------------------
 
-// buildTools collapses the legacy utility actions (IPFS upload, account
-// new, ping, etc.) into a single accordion at the bottom of the
-// dashboard so they remain accessible without dominating the layout.
-func buildTools(vc *ui.ViewContext) fyne.CanvasObject {
-	makeTool := func(label string, builder ui.View) *container.TabItem {
-		return container.NewTabItem(label, container.NewVScroll(builder(vc)))
+func buildIPFSSection(vc *ui.ViewContext) fyne.CanvasObject {
+	makeTab := func(label string, builder ui.View) *container.TabItem {
+		body := container.NewVScroll(builder(vc))
+		body.SetMinSize(fyne.NewSize(140, 200))
+		return container.NewTabItem(label, body)
 	}
 	tabs := container.NewAppTabs(
-		makeTool("Ping", PingView),
-		makeTool("New account", AccountNewView),
-		makeTool("List coins", AccountCoinsView),
-		makeTool("IPFS upload", IPFSLoadView),
-		makeTool("IPFS check CID", IPFSCheckCIDView),
-		makeTool("IPFS check pins", IPFSCheckPinsView),
-		makeTool("CID is in list?", CIDIsInListView),
-		makeTool("Whitelist has?", WhitelistHasView),
+		makeTab("Upload", IPFSLoadView),
+		makeTab("Check CID", IPFSCheckCIDView),
+		makeTab("Check pins", IPFSCheckPinsView),
 	)
-	tabs.SetTabLocation(container.TabLocationLeading)
-	item := widget.NewAccordionItem("Tools  ·  utilities", tabs)
-	return widget.NewAccordion(item)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return components.Card(theme.AccentUser.Primary, "IPFS", "", tabs)
+}
+
+// ---- tools section --------------------------------------------------------
+
+func buildTools(vc *ui.ViewContext) fyne.CanvasObject {
+	makeTab := func(label string, builder ui.View) *container.TabItem {
+		body := container.NewVScroll(builder(vc))
+		body.SetMinSize(fyne.NewSize(140, 200))
+		return container.NewTabItem(label, body)
+	}
+	tabs := container.NewAppTabs(
+		makeTab("Ping", PingView),
+		makeTab("New account", AccountNewView),
+		makeTab("List coins", AccountCoinsView),
+		makeTab("CID is in list?", CIDIsInListView),
+		makeTab("Whitelist has?", WhitelistHasView),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return components.Card(theme.AccentUser.Primary, "Tools", "", tabs)
 }
 
 // ---- helpers --------------------------------------------------------------

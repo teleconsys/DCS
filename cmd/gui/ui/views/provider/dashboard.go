@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	ftheme "fyne.io/fyne/v2/theme"
@@ -20,95 +19,19 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
-	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
 	"github.com/teleconsys/DCS/internal/offers"
 )
 
-// Dashboard is the redesigned Provider workspace: wallet strip on top,
-// then a vertical split between "Open offer windows" (discovery +
-// submit) and "My offers" (status + withdraw).
+// Dashboard is the Provider workspace: a vertical split between "Open offer windows"
+// (discovery + submit) and "My offers" (status + withdraw).
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	wallet := buildWalletCard(vc)
 	windows := buildOpenWindowsCard(vc)
 	mine := buildMyOffersCard(vc)
 
 	bottom := container.NewVSplit(windows, mine)
 	bottom.SetOffset(0.55)
 
-	return container.NewBorder(wallet, nil, nil, nil, bottom)
-}
-
-// ---- wallet ---------------------------------------------------------------
-
-func buildWalletCard(vc *ui.ViewContext) fyne.CanvasObject {
-	balLbl := widget.NewLabel("…")
-	wlDot := canvas.NewCircle(components.BadgeNeutral.Color())
-	wlDotBox := container.NewGridWrap(fyne.NewSize(12, 12), wlDot)
-	wlLbl := widget.NewLabel("checking…")
-
-	rows := container.NewVBox(
-		components.KeyValueRow(vc.Window, "Address", vc.Profile.Address, true),
-		components.KeyValueRow(vc.Window, "Gas coin", vc.Profile.GasCoinID, true),
-		container.NewHBox(
-			widget.NewLabelWithStyle("IOTA balance:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			balLbl,
-		),
-		container.NewHBox(
-			widget.NewLabelWithStyle("Whitelisted:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			wlDotBox,
-			wlLbl,
-		),
-	)
-
-	refresh := func() {
-		go func() {
-			snap := vc.Snapshot()
-			if strings.TrimSpace(snap.Address) == "" {
-				fyne.Do(func() {
-					balLbl.SetText("(no address — open Identity)")
-					wlDot.FillColor = components.BadgeNeutral.Color()
-					wlDot.Refresh()
-					wlLbl.SetText("unknown")
-				})
-				return
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-			defer cancel()
-
-			bal, balErr := service.IOTABalance(ctx, snap.RPCURL, snap.Address)
-			fyne.Do(func() {
-				if balErr != nil {
-					balLbl.SetText("error: " + balErr.Error())
-				} else {
-					balLbl.SetText(fmt.Sprintf("%s IOTA  (%s nanos)", formatIOTA(bal), strconv.FormatUint(bal, 10)))
-				}
-			})
-
-			found, wlErr := service.WhitelistHas(ctx, snap, snap.Address, io.Discard)
-			fyne.Do(func() {
-				if wlErr != nil {
-					wlDot.FillColor = components.BadgeErr.Color()
-					wlLbl.SetText(wlErr.Error())
-				} else if found {
-					wlDot.FillColor = components.BadgeOK.Color()
-					wlLbl.SetText("yes")
-				} else {
-					wlDot.FillColor = components.BadgeWarn.Color()
-					wlLbl.SetText("no — ask GC to add you")
-				}
-				wlDot.Refresh()
-			})
-		}()
-	}
-
-	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
-	manageBtn := widget.NewButtonWithIcon("Manage identity", ftheme.AccountIcon(), func() {
-		shell.OpenIdentity(vc.Window, vc.App, vc.Profile.Actor, refresh)
-	})
-
-	refresh()
-	subtitle := "address " + components.Short(vc.Profile.Address) + "  ·  gas " + components.Short(vc.Profile.GasCoinID)
-	return components.Card(theme.AccentProvider.Primary, "Provider wallet", subtitle, rows, manageBtn, refreshBtn)
+	return container.NewStack(bottom)
 }
 
 // ---- open offer windows ---------------------------------------------------
@@ -193,7 +116,7 @@ func buildOpenWindowsCard(vc *ui.ViewContext) fyne.CanvasObject {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 					defer cancel()
-					digest, err := service.SubmitOffer(ctx, vc.Snapshot(), service.SubmitOfferForm{
+					_, err := service.SubmitOffer(ctx, vc.Snapshot(), service.SubmitOfferForm{
 						CIDObjectID: window.ID,
 						Amount:      amt,
 						Debug:       debug.Checked,
@@ -201,9 +124,6 @@ func buildOpenWindowsCard(vc *ui.ViewContext) fyne.CanvasObject {
 					if err != nil {
 						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 						return
-					}
-					if digest != "" && vc.OnDigest != nil {
-						vc.OnDigest(digest)
 					}
 					refresh()
 				}()
@@ -318,16 +238,13 @@ func buildMyOffersCard(vc *ui.ViewContext) fyne.CanvasObject {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 					defer cancel()
-					digest, err := service.Withdraw(ctx, vc.Snapshot(), service.OfferIndexForm{
+					_, err := service.Withdraw(ctx, vc.Snapshot(), service.OfferIndexForm{
 						CIDObjectID: o.CIDObjectID,
 						Index:       uint64(o.Index),
 					}, vc.Output)
 					if err != nil {
 						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
 						return
-					}
-					if digest != "" && vc.OnDigest != nil {
-						vc.OnDigest(digest)
 					}
 					refresh()
 				}()
@@ -348,19 +265,6 @@ func buildMyOffersCard(vc *ui.ViewContext) fyne.CanvasObject {
 }
 
 // ---- helpers --------------------------------------------------------------
-
-// formatIOTA renders a uint64 nanos amount as decimal IOTA (one IOTA =
-// 10^9 nanos) with 9 fractional digits — trimmed for readability.
-func formatIOTA(nanos uint64) string {
-	whole := nanos / 1_000_000_000
-	frac := nanos % 1_000_000_000
-	s := fmt.Sprintf("%d.%09d", whole, frac)
-	s = strings.TrimRight(s, "0")
-	if strings.HasSuffix(s, ".") {
-		s += "0"
-	}
-	return s
-}
 
 func boolMark(b bool) string {
 	if b {

@@ -117,3 +117,94 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o d
 ```
 
 For full end-to-end flows and command testing, see: **`testsheet.md`**.
+
+---
+
+## Desktop GUI (`dcs-gui`)
+
+Alongside the CLI, the repository ships a Fyne-based desktop front-end at
+`cmd/gui`. It exposes every CLI command through forms and runs them
+against the same `internal/*` packages, so the CLI and the GUI are
+guaranteed to share behaviour.
+
+### Actor model
+
+The GUI is organized around the three actors described in `testsheet.md`
+§ 2:
+
+- **Ground Control** — admin; uses `GC_ENDPOINT` + `GC_API_TOKEN` to add
+  or remove whitelist members via the GC HTTP API (no on-chain signing).
+- **User** — content owner; signs with `USER_PRIVATE_KEY` /
+  `ACTIVE_PRIVATE_KEY`. Creates CIDs, approves and honors offers,
+  transitions epochs, adds funds, removes CIDs.
+- **Provider** — storage provider; signs with `PROVIDER_PRIVATE_KEY` /
+  `ACTIVE_PRIVATE_KEY`. Submits offers, withdraws after honor, monitors
+  open windows.
+
+A top-level switcher toggles between **Ground Control**, **User**,
+**Provider**, and a **Demo: User ⟷ Provider** mode that hosts a full
+User workspace on the left and a full Provider workspace on the right
+for end-to-end demos. Each side runs its own actions independently;
+every service call snapshots its actor profile at invocation time, so
+the two sides never trample each other.
+
+Accounts created from the GUI (`Account: new` view) are tagged with a
+`role` field (`user` or `provider`) inside `accounts/<alias>.json`. The
+per-actor alias picker filters to matching files first and offers
+untagged accounts (created by the CLI) as a fallback. Roles are
+advisory — not enforced — so the CLI and the GUI remain interoperable.
+
+### Build prerequisites
+
+Fyne requires `CGO_ENABLED=1` and a working C toolchain:
+
+- **Windows**: install [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or
+  mingw-w64 via `winget`:
+  ```powershell
+  winget install -e --id BrechtSanders.WinLibs.POSIX.UCRT
+  ```
+  Then make sure `gcc.exe` is on `PATH`.
+- **Linux** (Debian/Ubuntu):
+  ```bash
+  sudo apt install gcc libgl1-mesa-dev xorg-dev libxkbcommon-dev
+  ```
+- **macOS**: the Xcode Command Line Tools are sufficient (`xcode-select --install`).
+
+### First build
+
+The first build also needs to fetch the Fyne module and refresh
+`go.sum`:
+
+```bash
+go mod tidy
+```
+
+Then build and run:
+
+Linux:
+```bash
+CGO_ENABLED=1 go build -o dcs-gui ./cmd/gui
+./dcs-gui
+```
+
+Windows (PowerShell):
+```powershell
+$env:CGO_ENABLED = "1"
+go build -o dcs-gui.exe ./cmd/gui
+.\dcs-gui.exe
+```
+
+Run the binary from a folder that contains your `.env` (same expectation
+as the CLI). On startup the GUI reads the environment variables to
+pre-fill the per-actor identity panels; you can override any field
+inline.
+
+### Where to start
+
+- Use the **User** workspace if you want to upload content and manage
+  CIDs (load a file → IPFS, create CID, approve/honor offers, …).
+- Use the **Provider** workspace to monitor open offer windows, submit
+  offers, and withdraw payments.
+- Use the **Demo** mode to drive the full User⟷Provider flow in one
+  window (handy for screenshots, recordings, or local end-to-end
+  testing).

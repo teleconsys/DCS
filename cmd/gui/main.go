@@ -49,10 +49,17 @@ func main() {
 	a.Settings().SetTheme(t)
 
 	w := a.NewWindow("DCS — Decentralised Content Security")
-	w.Resize(fyne.NewSize(1400, 900))
+	w.SetFixedSize(false)
 
 	st := state.NewAppState()
 	buildMainWindow(w, st, t)
 
-	w.ShowAndRun()
+	w.Resize(initialWindowSize())
+	w.CenterOnScreen()
+
+	w.Show()
+	// Queued on the driver main thread so the native HWND exists (Windows:
+	// same as snap-to-top maximize — work area, not borderless fullscreen).
+	fyne.Do(func() { tryMaximizeInitialWindow(w) })
+	a.Run()
 }

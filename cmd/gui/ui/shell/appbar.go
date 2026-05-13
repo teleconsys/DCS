@@ -19,24 +19,21 @@ import (
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
-// AppBar is the persistent top chrome: brand, connection dot, wallet
-// pill, identity button and output-drawer toggle. The actor switcher
-// itself lives in the AppTabs container directly below the bar; the
-// AppBar exposes Refresh(actor) so callers can re-render whenever the
-// active tab changes.
+// AppBar is the persistent top chrome: brand, connection dot, identity
+// button. The actor switcher lives in the AppTabs container directly
+// below the bar; AppBar exposes Refresh(actor) so callers can re-render
+// whenever the active tab changes.
 type AppBar struct {
-	win   fyne.Window
-	app   *state.AppState
-	dcs   *theme.Theme
-	mu    sync.Mutex
-	stop  chan struct{}
+	win  fyne.Window
+	app  *state.AppState
+	dcs  *theme.Theme
+	mu   sync.Mutex
+	stop chan struct{}
 
-	brand     *widget.Label
-	connDot   *canvas.Circle
-	connLbl   *widget.Label
-	walletLbl *widget.Label
-	idBtn     *widget.Button
-	outBtn    *widget.Button
+	brand   *widget.Label
+	connDot *canvas.Circle
+	connLbl *widget.Label
+	idBtn   *widget.Button
 
 	root fyne.CanvasObject
 }
@@ -45,8 +42,7 @@ type AppBar struct {
 // re-pings the RPC every 30 s. Call Stop on app shutdown to stop the
 // ticker cleanly (not strictly required: the goroutine is bounded by
 // the app lifetime).
-func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme,
-	onIdentity, onToggleOutput func()) *AppBar {
+func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, onIdentity func()) *AppBar {
 	b := &AppBar{
 		win:  win,
 		app:  app,
@@ -60,21 +56,11 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme,
 	dotBox := container.NewGridWrap(fyne.NewSize(12, 12), b.connDot)
 	b.connLbl = widget.NewLabel("connecting…")
 
-	b.walletLbl = widget.NewLabel("")
-	b.walletLbl.TextStyle = fyne.TextStyle{Monospace: true}
-
 	b.idBtn = widget.NewButtonWithIcon("Identity", ftheme.AccountIcon(), onIdentity)
 	b.idBtn.Importance = widget.LowImportance
-	b.outBtn = widget.NewButtonWithIcon("Log", ftheme.DocumentIcon(), onToggleOutput)
-	b.outBtn.Importance = widget.LowImportance
 
 	left := container.NewHBox(b.brand)
-	right := container.NewHBox(
-		dotBox, b.connLbl,
-		widget.NewSeparator(),
-		b.walletLbl,
-		b.idBtn, b.outBtn,
-	)
+	right := container.NewHBox(dotBox, b.connLbl, widget.NewSeparator(), b.idBtn)
 	b.root = container.NewBorder(nil, widget.NewSeparator(), left, right, nil)
 
 	go b.pingLoop()
@@ -93,14 +79,11 @@ func (b *AppBar) Stop() {
 	}
 }
 
-// Refresh re-reads the registry view for the given actor and refreshes
-// the wallet pill + identity button caption. Triggers an immediate
+// Refresh updates the identity button caption and triggers an immediate
 // ping so connection state lines up with the visible actor.
 func (b *AppBar) Refresh(actor state.Actor) {
 	p := b.app.Registry.Profile(actor)
-	wallet := actorWallet(p)
 	fyne.Do(func() {
-		b.walletLbl.SetText(wallet)
 		b.idBtn.SetText("Identity — " + actor.String())
 	})
 	go b.pingNow(p.RPCURL)
@@ -169,23 +152,4 @@ func (b *AppBar) setConn(state connState, msg string) {
 	}
 	b.connDot.Refresh()
 	b.connLbl.SetText(msg)
-}
-
-func actorWallet(p *state.ActorProfile) string {
-	switch p.Actor {
-	case state.ActorGC:
-		ep := strings.TrimSpace(p.GCEndpoint)
-		if ep == "" {
-			ep = "(no endpoint)"
-		}
-		return "GC · " + ep
-	default:
-		addr := strings.TrimSpace(p.Address)
-		if addr == "" {
-			addr = "(no address)"
-		} else if len(addr) > 14 {
-			addr = addr[:8] + "…" + addr[len(addr)-4:]
-		}
-		return fmt.Sprintf("%s · %s", p.Actor, addr)
-	}
 }

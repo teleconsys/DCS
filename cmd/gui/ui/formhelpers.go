@@ -14,9 +14,9 @@ import (
 )
 
 // Action is the canonical signature for an asynchronous action launched
-// by a view. It receives a goroutine-local context, the live OutputView
-// (as an io.Writer), and a snapshot of the actor profile taken at the
-// moment the Run button was clicked.
+// by a view. It receives a goroutine-local context, an io.Writer for
+// command output (often discarded), and a snapshot of the actor profile
+// taken at the moment the Run button was clicked.
 type Action func(ctx context.Context, out io.Writer, snap state.ActorProfile) error
 
 // RunButton builds a "Run" button that:
@@ -46,9 +46,6 @@ func RunButton(vc *ViewContext, label, title string,
 				return action(ctx, out, snap)
 			},
 		}, func(err error) {
-			// Re-enable the button on the UI thread. Views that
-			// produce a digest call vc.OnDigest themselves; the
-			// runner doesn't try to be clever about it.
 			_ = err
 			fyne.Do(func() { btn.Enable() })
 		})

@@ -59,7 +59,11 @@ func CardStretch(accent color.Color, title, subtitle string, body fyne.CanvasObj
 	if len(actions) > 0 {
 		footer = container.NewVBox(widget.NewSeparator(), container.NewHBox(actions...))
 	}
-	inner := container.NewBorder(header, footer, nil, nil, body)
+	center := body
+	if body != nil {
+		center = container.NewStack(body)
+	}
+	inner := container.NewBorder(header, footer, nil, nil, center)
 	padded := container.NewPadded(inner)
 	return container.NewBorder(nil, nil, stripe, nil, padded)
 }

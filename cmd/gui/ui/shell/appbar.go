@@ -2,7 +2,6 @@ package shell
 
 import (
 	"context"
-	"fmt"
 	"image/color"
 	"strings"
 	"sync"
@@ -56,7 +55,7 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, onIdentity 
 	dotBox := container.NewGridWrap(fyne.NewSize(12, 12), b.connDot)
 	b.connLbl = widget.NewLabel("connecting…")
 
-	b.idBtn = widget.NewButtonWithIcon("Identity", ftheme.AccountIcon(), onIdentity)
+	b.idBtn = widget.NewButtonWithIcon("", ftheme.AccountIcon(), onIdentity)
 	b.idBtn.Importance = widget.LowImportance
 
 	left := container.NewHBox(b.brand)
@@ -79,13 +78,10 @@ func (b *AppBar) Stop() {
 	}
 }
 
-// Refresh updates the identity button caption and triggers an immediate
-// ping so connection state lines up with the visible actor.
+// Refresh triggers an immediate ping so connection state lines up with
+// the visible actor.
 func (b *AppBar) Refresh(actor state.Actor) {
 	p := b.app.Registry.Profile(actor)
-	fyne.Do(func() {
-		b.idBtn.SetText("Identity — " + actor.String())
-	})
 	go b.pingNow(p.RPCURL)
 }
 
@@ -119,12 +115,11 @@ func (b *AppBar) pingNow(rpcURL string) {
 		fyne.Do(func() { b.setConn(stateBad, "dial failed") })
 		return
 	}
-	seq, err := w.Ping(ctx)
-	if err != nil {
+	if _, err := w.Ping(ctx); err != nil {
 		fyne.Do(func() { b.setConn(stateBad, "unreachable") })
 		return
 	}
-	fyne.Do(func() { b.setConn(stateOK, fmt.Sprintf("checkpoint %d", seq)) })
+	fyne.Do(func() { b.setConn(stateOK, "connected") })
 }
 
 type connState int

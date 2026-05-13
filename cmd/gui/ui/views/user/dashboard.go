@@ -21,28 +21,97 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/ui/wizards"
 )
 
-// Dashboard is the User workspace: left rail (Upload, then IPFS and Tools
-// as two equal columns) beside the My CIDs grid, with a draggable split
-// between the rail and the grid. IPFS/Tools use a grid instead of HSplit
-// so narrow panes do not collapse to unusable widths.
+// clampMinWLayout reports a fixed minimum width (while keeping the child's
+// natural height) but always lays out the child to the full allocated size.
+// This works around fyne's VScroll: MinSize width becomes max(SetMinSize,
+// content.MinSize), so wide IPFS/Tools cards would otherwise force the rail
+// to stay huge and block the rail | My CIDs split in narrow Demo panes.
+type clampMinWLayout struct {
+	MinW float32
+}
+
+func (l clampMinWLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	if len(objects) == 0 {
+		return fyne.NewSize(0, 0)
+	}
+	h := objects[0].MinSize().Height
+	return fyne.NewSize(l.MinW, h)
+}
+
+func (l clampMinWLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	if len(objects) == 0 {
+		return
+	}
+	objects[0].Resize(size)
+	objects[0].Move(fyne.NewPos(0, 0))
+}
+
+// userDashboardOpts tweaks inner layout while keeping the main rail | My CIDs split.
+type userDashboardOpts struct {
+	cidGridCols    int  // AdaptiveGrid column count for CID tiles (Demo uses 1).
+	stackIPFSTools bool // when true, IPFS and Tools stack vertically instead of side-by-side.
+	// compactSplitMins lowers rail and CID scroll minimum sizes so the HSplit
+	// between rail and My CIDs stays draggable when the User pane is only
+	// half the window (Demo tab).
+	compactSplitMins bool
+}
+
+// Dashboard is the User workspace: left rail (Upload, then IPFS and Tools)
+// beside the My CIDs grid, with a draggable split between rail and grid.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	grid, refreshGrid := buildMyCIDsCard(vc)
+	return buildUserDashboard(vc, userDashboardOpts{cidGridCols: 2, stackIPFSTools: false})
+}
+
+// DashboardForDemo is like Dashboard but stacks IPFS/Tools vertically and lists
+// CID tiles in a single column — for the Demo tab while preserving the rail | grid split.
+func DashboardForDemo(vc *ui.ViewContext) fyne.CanvasObject {
+	return buildUserDashboard(vc, userDashboardOpts{
+		cidGridCols:      1,
+		stackIPFSTools:   true,
+		compactSplitMins: true,
+	})
+}
+
+func buildUserDashboard(vc *ui.ViewContext, opts userDashboardOpts) fyne.CanvasObject {
+	var cidScrollMin fyne.Size
+	if opts.compactSplitMins {
+		cidScrollMin = fyne.NewSize(120, 96)
+	}
+	grid, refreshGrid := buildMyCIDsCard(vc, opts.cidGridCols, cidScrollMin)
 	hero := buildHero(vc, refreshGrid)
 	ipfs := buildIPFSSection(vc)
 	tools := buildTools(vc)
 
-	ipfsTools := container.NewGridWithColumns(2, ipfs, tools)
+	var ipfsTools fyne.CanvasObject
+	if opts.stackIPFSTools {
+		ipfsTools = container.NewVBox(ipfs, tools)
+	} else {
+		ipfsTools = container.NewGridWithColumns(2, ipfs, tools)
+	}
 
 	sidebar := container.NewVBox(
 		hero,
 		widget.NewSeparator(),
 		ipfsTools,
 	)
-	sidebarScroll := container.NewVScroll(sidebar)
-	sidebarScroll.SetMinSize(fyne.NewSize(400, 280))
+	var railScroll fyne.CanvasObject
+	if opts.compactSplitMins {
+		railCore := container.New(clampMinWLayout{MinW: 176}, sidebar)
+		sc := container.NewVScroll(railCore)
+		sc.SetMinSize(fyne.NewSize(176, 120))
+		railScroll = sc
+	} else {
+		sc := container.NewVScroll(sidebar)
+		sc.SetMinSize(fyne.NewSize(400, 280))
+		railScroll = sc
+	}
+
+	if opts.compactSplitMins {
+		grid = container.New(clampMinWLayout{MinW: 152}, grid)
+	}
 
 	split := container.NewHSplit(
-		container.NewPadded(sidebarScroll),
+		container.NewPadded(railScroll),
 		grid,
 	)
 	split.SetOffset(0.38)
@@ -66,12 +135,18 @@ func buildHero(vc *ui.ViewContext, onCreated func()) fyne.CanvasObject {
 
 // ---- My CIDs grid ---------------------------------------------------------
 
-func buildMyCIDsCard(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
+func buildMyCIDsCard(vc *ui.ViewContext, gridCols int, cidScrollMin fyne.Size) (fyne.CanvasObject, func()) {
+	if gridCols < 1 {
+		gridCols = 1
+	}
+	if cidScrollMin.Width <= 0 || cidScrollMin.Height <= 0 {
+		cidScrollMin = fyne.NewSize(220, 160)
+	}
 	// Adaptive grid reflows columns with window width; scroll keeps MinSize bounded
 	// so many tiles do not force the window to grow vertically.
-	grid := container.NewAdaptiveGrid(2)
+	grid := container.NewAdaptiveGrid(gridCols)
 	cidScroll := container.NewVScroll(grid)
-	cidScroll.SetMinSize(fyne.NewSize(220, 160))
+	cidScroll.SetMinSize(cidScrollMin)
 
 	statusLbl := widget.NewLabel("0 CIDs")
 	emptyLbl := components.EmptyState(

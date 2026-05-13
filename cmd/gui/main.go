@@ -15,6 +15,7 @@ import (
 	"fyne.io/fyne/v2/app"
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/internal/config"
 )
 
@@ -44,11 +45,14 @@ func main() {
 	ensureLocaleForFyne()
 
 	a := app.NewWithID("io.teleconsys.dcs.gui")
+	t := theme.New()
+	a.Settings().SetTheme(t)
+
 	w := a.NewWindow("DCS — Decentralised Content Security")
 	w.Resize(fyne.NewSize(1400, 900))
 
 	st := state.NewAppState()
-	buildMainWindow(w, st)
+	buildMainWindow(w, st, t)
 
 	w.ShowAndRun()
 }

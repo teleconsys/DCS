@@ -29,14 +29,7 @@ func (vc *ViewContext) Snapshot() state.ActorProfile {
 	return vc.Profile.Clone()
 }
 
-// View is a constructor for an action's form. Returning a fyne object
-// lets the workspace assembler embed it under a content stack.
+// View is a constructor for an action's form. Reused by the User
+// dashboard's "Tools" accordion to embed the legacy per-action views as
+// individual tabs without re-implementing them.
 type View func(vc *ViewContext) fyne.CanvasObject
-
-// NamedView pairs a sidebar label with its View builder. View
-// subpackages expose an `All()` returning a slice of these so the
-// workspace can wire them up.
-type NamedView struct {
-	Name    string
-	Builder View
-}

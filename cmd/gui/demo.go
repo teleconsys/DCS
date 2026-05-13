@@ -1,33 +1,34 @@
 package main
 
 import (
-	"fmt"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
+	"github.com/teleconsys/DCS/cmd/gui/ui/views/provider"
+	"github.com/teleconsys/DCS/cmd/gui/ui/views/user"
 )
 
-// buildDemo assembles the "Demo: User ⟷ Provider" side-by-side view.
-// Each side is a complete workspace bound to its own actor profile.
-// Actions are independent: every service call snapshots its profile at
-// invocation time, so a Provider submit_offer and a User approve_offer
-// can run in parallel without cross-talk.
-func buildDemo(win fyne.Window, appState *state.AppState) fyne.CanvasObject {
-	userWS := buildWorkspace(win, appState, state.ActorUser)
-	providerWS := buildWorkspace(win, appState, state.ActorProvider)
+// buildDemo lays out the User and Provider dashboards side-by-side so
+// the User↔Provider story (upload → offer window opens → submit → approve
+// → honor → withdraw) can be demoed in a single window. Each side
+// drives its own actor shell (independent output + runner).
+func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*shell.ActorShell, drawer *shell.OutputDrawer) fyne.CanvasObject {
+	digestCB := func(string) { drawer.RefreshDigest() }
+	userVC := shells[state.ActorUser].NewViewContext(win, app, digestCB)
+	provVC := shells[state.ActorProvider].NewViewContext(win, app, digestCB)
 
-	wrap := func(title string, ws *workspace) fyne.CanvasObject {
-		header := widget.NewLabelWithStyle(title, fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-		return container.NewBorder(header, nil, nil, nil, ws.canvas)
-	}
+	userBody := user.Dashboard(userVC)
+	provBody := provider.Dashboard(provVC)
 
-	split := container.NewHSplit(
-		wrap(fmt.Sprintf("◀ %s", state.ActorUser), userWS),
-		wrap(fmt.Sprintf("%s ▶", state.ActorProvider), providerWS),
-	)
+	leftHdr := widget.NewLabelWithStyle("◀ User", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	rightHdr := widget.NewLabelWithStyle("Provider ▶", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+
+	left := container.NewBorder(leftHdr, nil, nil, nil, container.NewPadded(userBody))
+	right := container.NewBorder(rightHdr, nil, nil, nil, container.NewPadded(provBody))
+	split := container.NewHSplit(left, right)
 	split.SetOffset(0.5)
 	return split
 }

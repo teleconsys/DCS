@@ -18,8 +18,17 @@ import (
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
-// AppBar is the persistent top chrome: brand, connection dot, identity
-// button. The actor switcher lives in the AppTabs container directly
+// Connection status labels (shown next to the indicator dot in the app bar).
+const (
+	connLabelConnecting  = "Connecting…"
+	connLabelConnected   = "Connected"
+	connLabelNoRPC       = "No RPC"
+	connLabelDialFailed  = "Dial failed"
+	connLabelUnreachable = "Unreachable"
+)
+
+// AppBar is the persistent top chrome: brand, connection dot, settings and
+// identity buttons. The actor switcher lives in the AppTabs container directly
 // below the bar; AppBar exposes Refresh(actor) so callers can re-render
 // whenever the active tab changes.
 type AppBar struct {
@@ -52,14 +61,24 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, onIdentity 
 	b.brand = widget.NewLabelWithStyle("DCS", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 	b.connDot = canvas.NewCircle(neutralDot)
-	dotBox := container.NewGridWrap(fyne.NewSize(12, 12), b.connDot)
-	b.connLbl = widget.NewLabel("connecting…")
+	dotCell := container.NewGridWrap(fyne.NewSize(10, 10), b.connDot)
+	dotRow := container.NewCenter(dotCell)
+	b.connLbl = widget.NewLabel(connLabelConnecting)
+
+	connGroup := container.NewBorder(nil, nil, dotRow, nil, b.connLbl)
 
 	b.idBtn = widget.NewButtonWithIcon("", ftheme.AccountIcon(), onIdentity)
 	b.idBtn.Importance = widget.LowImportance
 
+	settingsBtn := widget.NewButtonWithIcon("", ftheme.SettingsIcon(), func() {
+		OpenAppSettings(win, app, func() {
+			b.Refresh(app.Registry.Current())
+		})
+	})
+	settingsBtn.Importance = widget.LowImportance
+
 	left := container.NewHBox(b.brand)
-	right := container.NewHBox(dotBox, b.connLbl, widget.NewSeparator(), b.idBtn)
+	right := container.NewHBox(connGroup, widget.NewSeparator(), settingsBtn, b.idBtn)
 	b.root = container.NewBorder(nil, widget.NewSeparator(), left, right, nil)
 
 	go b.pingLoop()
@@ -105,21 +124,21 @@ func (b *AppBar) pingNow(rpcURL string) {
 
 	rpcURL = strings.TrimSpace(rpcURL)
 	if rpcURL == "" {
-		b.setConn(stateBad, "no RPC")
+		b.setConn(stateBad, connLabelNoRPC)
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	w, err := rebased.Dial(rpcURL)
 	if err != nil {
-		b.setConn(stateBad, "dial failed")
+		b.setConn(stateBad, connLabelDialFailed)
 		return
 	}
 	if _, err := w.Ping(ctx); err != nil {
-		b.setConn(stateBad, "unreachable")
+		b.setConn(stateBad, connLabelUnreachable)
 		return
 	}
-	b.setConn(stateOK, "connected")
+	b.setConn(stateOK, connLabelConnected)
 }
 
 type connState int

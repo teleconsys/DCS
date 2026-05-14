@@ -30,7 +30,5 @@ func (vc *ViewContext) Snapshot() state.ActorProfile {
 	return vc.Profile.Clone()
 }
 
-// View is a constructor for an action's form. Reused by the User
-// dashboard's "Tools" accordion to embed the legacy per-action views as
-// individual tabs without re-implementing them.
+// View is a constructor for an action form (IPFS tabs, dialogs, etc.).
 type View func(vc *ViewContext) fyne.CanvasObject

@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/ui/components"
 	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/provider"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/user"
@@ -61,8 +62,7 @@ func (demoHostLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 }
 
 // buildDemo lays out User and Provider side-by-side. The User side uses
-// DashboardForDemo: single-column CID tiles and IPFS/Tools stacked vertically,
-// while keeping the usual My CIDs | rail split.
+// DashboardForDemo: single-column My CIDs only (no IPFS/Tools rail).
 func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*shell.ActorShell) fyne.CanvasObject {
 	userVC := shells[state.ActorUser].NewViewContext(win, app)
 	provVC := shells[state.ActorProvider].NewViewContext(win, app)
@@ -75,7 +75,7 @@ func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*she
 
 	left := container.New(demoSideClamp{MinW: 240}, container.NewBorder(leftHdr, nil, nil, nil, container.NewPadded(userBody)))
 	right := container.New(demoSideClamp{MinW: 240}, container.NewBorder(rightHdr, nil, nil, nil, container.NewPadded(provBody)))
-	split := container.NewHSplit(left, right)
+	split := components.NewPillHSplit(left, right)
 	split.SetOffset(0.5)
 	return container.New(demoHostLayout{}, split)
 }

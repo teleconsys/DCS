@@ -132,6 +132,15 @@ func (r *ActorRegistry) Current() Actor { return r.current }
 // SetCurrent updates the currently-selected actor.
 func (r *ActorRegistry) SetCurrent(a Actor) { r.current = a }
 
+// SyncRPCURL sets the chain RPC base URL on every actor profile so the
+// three roles share one endpoint for the current GUI session.
+func (r *ActorRegistry) SyncRPCURL(url string) {
+	u := strings.TrimSpace(url)
+	for _, a := range []Actor{ActorGC, ActorUser, ActorProvider} {
+		r.Profile(a).RPCURL = u
+	}
+}
+
 // defaultRPC and defaultGraphQL match the fallbacks used by the CLI when
 // no .env values are present.
 const (

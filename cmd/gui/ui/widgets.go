@@ -79,24 +79,12 @@ func ParseUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, 10, 64)
 }
 
-// NewPrivateKeyEntry returns a password-style entry with a "show" toggle.
-// Both widgets share the same underlying text.
+// NewPrivateKeyEntry returns a password-style entry (built-in reveal control).
 func NewPrivateKeyEntry(initial string) (entry *widget.Entry, container fyne.CanvasObject) {
-	masked := widget.NewPasswordEntry()
-	masked.SetPlaceHolder("iotaprivkey1… (or hex / base64 keystore)")
-	masked.SetText(initial)
-	masked.Password = true
-	masked.Refresh()
-
-	reveal := widget.NewCheck("show", func(b bool) {
-		masked.Password = !b
-		masked.Refresh()
-	})
-	return masked, fyneRow(masked, reveal)
-}
-
-func fyneRow(left fyne.CanvasObject, right fyne.CanvasObject) fyne.CanvasObject {
-	return container.NewBorder(nil, nil, nil, right, left)
+	e := widget.NewPasswordEntry()
+	e.SetPlaceHolder("iotaprivkey1… (or hex / base64 keystore)")
+	e.SetText(initial)
+	return e, e
 }
 
 // NewAliasSelect builds a dropdown from ./accounts/<alias>.json filtered

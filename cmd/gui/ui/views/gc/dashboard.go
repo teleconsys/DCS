@@ -3,10 +3,12 @@ package gc
 import (
 	"context"
 	"fmt"
+	"image/color"
 	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	ftheme "fyne.io/fyne/v2/theme"
@@ -18,13 +20,30 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
 )
 
-// Dashboard is the Ground Control whitelist: members table with delete per row,
-// status and Add, inside a Whitelist section card.
+// Dashboard is the Admin workspace: whitelist members and a lookup tab
+// for checking whether an address is on the whitelist.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	return container.NewStack(buildWhitelistView(vc))
+	members := tabContentWithTopGap(buildWhitelistMembers(vc))
+	lookup := tabContentWithTopGap(container.NewVScroll(ui.TopBound(WhitelistHasView(vc))))
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Members", members),
+		container.NewTabItem("Lookup", lookup),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return container.NewStack(components.CardStretch(theme.AccentGC.Primary, "Whitelist", "", tabs))
 }
 
-func buildWhitelistView(vc *ui.ViewContext) fyne.CanvasObject {
+// tabContentWithTopGap keeps a fixed gap under the AppTabs bar, then gives
+// everything below that line to inner (via Max) so the members table /
+// lookup scroll actually receives the tab's remaining height. A trailing
+// Spacer in a VBox would absorb that height and crop the list to one row.
+func tabContentWithTopGap(inner fyne.CanvasObject) fyne.CanvasObject {
+	gap := canvas.NewRectangle(color.Transparent)
+	gap.SetMinSize(fyne.NewSize(0, 14))
+	return container.NewBorder(gap, nil, nil, nil, container.NewMax(inner))
+}
+
+func buildWhitelistMembers(vc *ui.ViewContext) fyne.CanvasObject {
 	table := components.NewDataTable(
 		[]components.DataColumn{{Header: "Member address"}},
 		"No addresses on the whitelist yet.",
@@ -123,5 +142,5 @@ func buildWhitelistView(vc *ui.ViewContext) fyne.CanvasObject {
 	body := container.NewBorder(top, nil, nil, nil, table.CanvasObject())
 	refresh()
 
-	return components.CardStretch(theme.AccentGC.Primary, "Whitelist", "", body)
+	return body
 }

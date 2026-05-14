@@ -22,21 +22,24 @@ import (
 	"github.com/teleconsys/DCS/internal/offers"
 )
 
-// Dashboard is the Provider workspace: "Open offer windows" and "My offers"
-// side by side with a draggable split between them.
+// Dashboard is the Provider workspace: My Offers full width; open offer
+// windows open from the "New" button in a modal.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	windows := buildOpenWindowsCard(vc)
-	mine := buildMyOffersCard(vc)
-
-	split := container.NewHSplit(windows, mine)
-	split.SetOffset(0.52)
-
-	return container.NewStack(split)
+	windowsBody, refreshWindows := buildOpenWindowsPanel(vc)
+	openWindowsModal := func() {
+		refreshWindows()
+		scroll := container.NewScroll(windowsBody)
+		scroll.SetMinSize(fyne.NewSize(640, 360))
+		d := dialog.NewCustom("Open offer windows", "Close", scroll, vc.Window)
+		d.Resize(fyne.NewSize(760, 480))
+		d.Show()
+	}
+	return container.NewStack(buildMyOffersCard(vc, openWindowsModal))
 }
 
-// ---- open offer windows ---------------------------------------------------
+// ---- open offer windows (panel for modal) ---------------------------------
 
-func buildOpenWindowsCard(vc *ui.ViewContext) fyne.CanvasObject {
+func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 	table := components.NewDataTable(
 		[]components.DataColumn{
 			{Header: "CID"},
@@ -149,16 +152,12 @@ func buildOpenWindowsCard(vc *ui.ViewContext) fyne.CanvasObject {
 		}
 	}()
 
-	return components.CardStretch(theme.AccentProvider.Primary,
-		"Open offer windows",
-		"",
-		body,
-	)
+	return body, refresh
 }
 
 // ---- my offers ------------------------------------------------------------
 
-func buildMyOffersCard(vc *ui.ViewContext) fyne.CanvasObject {
+func buildMyOffersCard(vc *ui.ViewContext, onNew func()) fyne.CanvasObject {
 	table := components.NewDataTable(
 		[]components.DataColumn{
 			{Header: "CID"},
@@ -251,14 +250,17 @@ func buildMyOffersCard(vc *ui.ViewContext) fyne.CanvasObject {
 			}, vc.Window)
 	}
 
+	newBtn := widget.NewButton("New", onNew)
+	newBtn.Importance = widget.HighImportance
 	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
-	header := container.NewBorder(nil, nil, statusLbl, refreshBtn)
+	toolbar := container.NewHBox(newBtn, refreshBtn)
+	header := container.NewBorder(nil, nil, statusLbl, toolbar)
 	body := container.NewBorder(header, nil, nil, nil, table.CanvasObject())
 
 	refresh()
 
 	return components.CardStretch(theme.AccentProvider.Primary,
-		"My offers",
+		"My Offers",
 		"",
 		body,
 	)

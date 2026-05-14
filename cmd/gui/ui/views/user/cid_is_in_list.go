@@ -24,5 +24,5 @@ func CIDIsInListView(vc *ui.ViewContext) fyne.CanvasObject {
 			_, err := service.CIDIsInList(ctx, snap, cidID.Text, out)
 			return err
 		})
-	return container.NewVBox(ui.Card("Membership check (read-only)", form), run)
+	return container.NewVBox(ui.Card("On-chain CID list (read-only)", form), run)
 }

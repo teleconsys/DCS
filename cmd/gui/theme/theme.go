@@ -99,6 +99,8 @@ func (t *Theme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color
 	switch name {
 	case ftheme.ColorNamePrimary, ftheme.ColorNameFocus, ftheme.ColorNameSelection:
 		return t.accent.Load().Primary
+	case ftheme.ColorNameForegroundOnPrimary:
+		return color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 	case ftheme.ColorNameHover:
 		return t.accent.Load().Hover
 	case ftheme.ColorNameSuccess:
@@ -168,3 +170,6 @@ func CardInteriorFill() color.Color { return colorCardInterior }
 
 // CardInteriorStroke is the subtle outline around card panels.
 func CardInteriorStroke() color.Color { return colorCardStroke }
+
+// SeparatorStroke matches separator widgets (horizontal rules, dividers).
+func SeparatorStroke() color.Color { return colorSeparator }

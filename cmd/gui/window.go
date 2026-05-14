@@ -26,8 +26,10 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 	var bar *shell.AppBar
 	bar = shell.NewAppBar(win, app, t,
 		func() {
-			shell.OpenIdentity(win, app, app.Registry.Current(), func() {
-				bar.Refresh(app.Registry.Current())
+			act := app.Registry.Current()
+			vc := shells[act].NewViewContext(win, app)
+			shell.OpenIdentity(win, app, act, vc, func() {
+				bar.Refresh(act)
 			})
 		},
 	)
@@ -44,7 +46,7 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 	)
 	demoBody := buildDemo(win, app, shells)
 
-	gcTab := container.NewTabItemWithIcon("Ground Control", ftheme.SettingsIcon(), bodies[state.ActorGC])
+	gcTab := container.NewTabItemWithIcon("Admin", ftheme.SettingsIcon(), bodies[state.ActorGC])
 	userTab := container.NewTabItemWithIcon("User", ftheme.AccountIcon(), bodies[state.ActorUser])
 	provTab := container.NewTabItemWithIcon("Provider", ftheme.StorageIcon(), bodies[state.ActorProvider])
 	demoTab := container.NewTabItemWithIcon("Demo", ftheme.ComputerIcon(), demoBody)

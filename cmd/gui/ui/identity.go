@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
@@ -23,7 +22,7 @@ import (
 //
 // For GC, the panel shows endpoint + token fields. For User and
 // Provider it shows alias + private key + derived address + gas coin
-// id.
+// id. Chain RPC is edited in Settings (gear).
 type IdentityPanel struct {
 	win     fyne.Window
 	profile *state.ActorProfile
@@ -39,9 +38,6 @@ type IdentityPanel struct {
 	// GC widgets
 	gcEndpoint *widget.Entry
 	gcToken    *widget.Entry
-
-	// network widgets (shared)
-	rpcEntry *widget.Entry
 
 	canvas fyne.CanvasObject
 
@@ -68,21 +64,7 @@ func (p *IdentityPanel) Profile() *state.ActorProfile { return p.profile }
 func (p *IdentityPanel) Snapshot() state.ActorProfile { return p.profile.Clone() }
 
 func (p *IdentityPanel) build() {
-	title := widget.NewLabelWithStyle(
-		fmt.Sprintf("Identity — %s", p.profile.Actor),
-		fyne.TextAlignLeading,
-		fyne.TextStyle{Bold: true},
-	)
-
-	p.rpcEntry = widget.NewEntry()
-	p.rpcEntry.SetText(p.profile.RPCURL)
-	p.rpcEntry.OnChanged = func(s string) {
-		p.profile.RPCURL = strings.TrimSpace(s)
-		p.notify()
-	}
-
 	form := widget.NewForm()
-	form.Append("RPC URL", p.rpcEntry)
 
 	if p.profile.Actor == state.ActorGC {
 		p.buildGC(form)
@@ -90,7 +72,7 @@ func (p *IdentityPanel) build() {
 		p.buildSigner(form)
 	}
 
-	p.canvas = container.NewVBox(title, form)
+	p.canvas = form
 }
 
 func (p *IdentityPanel) buildGC(form *widget.Form) {

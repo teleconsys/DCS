@@ -1,8 +1,8 @@
 package provider
 
 import (
+	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	ftheme "fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -19,27 +20,49 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 	"github.com/teleconsys/DCS/internal/offers"
 )
 
 // Dashboard is the Provider workspace: My Offers full width; open offer
 // windows open from the "New" button in a modal.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
-	windowsBody, refreshWindows := buildOpenWindowsPanel(vc)
+	var refreshMyOffers func(bool)
+
+	windowsBody, refreshWindows := buildOpenWindowsPanel(vc, func() {
+		if refreshMyOffers != nil {
+			refreshMyOffers(false)
+		}
+	})
+
 	openWindowsModal := func() {
 		refreshWindows()
 		scroll := container.NewScroll(windowsBody)
 		scroll.SetMinSize(fyne.NewSize(640, 360))
-		d := dialog.NewCustom("Open offer windows", "Close", scroll, vc.Window)
+		var d *dialog.CustomDialog
+		closeBtn := widget.NewButton("Close", func() {
+			if d != nil {
+				d.Hide()
+			}
+			if refreshMyOffers != nil {
+				refreshMyOffers(false)
+			}
+		})
+		footer := container.NewHBox(layout.NewSpacer(), closeBtn)
+		body := container.NewBorder(nil, footer, nil, nil, scroll)
+		d = dialog.NewCustomWithoutButtons("Open offer windows", body, vc.Window)
 		d.Resize(fyne.NewSize(760, 480))
 		d.Show()
 	}
-	return container.NewStack(buildMyOffersCard(vc, openWindowsModal))
+
+	card, refreshFn := buildMyOffersCard(vc, openWindowsModal)
+	refreshMyOffers = refreshFn
+	return container.NewStack(card)
 }
 
 // ---- open offer windows (panel for modal) ---------------------------------
 
-func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
+func buildOpenWindowsPanel(vc *ui.ViewContext, onOffersChanged func()) (fyne.CanvasObject, func()) {
 	table := components.NewDataTable(
 		[]components.DataColumn{
 			{Header: "CID"},
@@ -52,7 +75,7 @@ func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 	statusLbl := widget.NewLabel("0 windows")
 
 	var (
-		latest    []offers.OpenOfferCID
+		latest     []offers.OpenOfferCID
 		openSubmit func(window offers.OpenOfferCID)
 	)
 
@@ -78,17 +101,29 @@ func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 		})
 	}
 
-	refresh := func() {
+	refresh := func(showOKDialog bool) {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			items, err := service.ListOpenOffers(ctx, vc.Snapshot(), io.Discard)
 			if err != nil {
-				fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+				fyne.Do(func() {
+					if vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Error, err.Error())
+					}
+				})
 				return
 			}
 			latest = items
 			rebuild()
+			if showOKDialog {
+				fyne.Do(func() {
+					countText := fmt.Sprintf("%d window(s)", len(latest))
+					feedback.FlashStatus(statusLbl, "Refreshed", feedback.Success, func() {
+						statusLbl.SetText(countText)
+					}, 2*time.Second)
+				})
+			}
 		}()
 	}
 
@@ -106,40 +141,92 @@ func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 			widget.NewFormItem("Amount", amount),
 			widget.NewFormItem("", debug),
 		)
-		d := dialog.NewCustomConfirm("Submit offer", "Submit", "Cancel", form,
-			func(ok bool) {
-				if !ok {
-					return
+
+		okTitle := widget.NewLabelWithStyle("Offer submitted", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+		okTitle.Importance = widget.SuccessImportance
+		okSub := widget.NewLabel("Your offer is on chain. The list will refresh when you close this dialog.")
+		okSub.Wrapping = fyne.TextWrapWord
+		okSub.Alignment = fyne.TextAlignCenter
+		successPane := container.NewVBox(
+			container.NewCenter(okTitle),
+			okSub,
+		)
+		successPane.Hide()
+
+		formPane := container.NewVBox(form)
+		content := container.NewStack(formPane, successPane)
+
+		var d *dialog.CustomDialog
+		submitBtn := widget.NewButton("Submit", nil)
+		submitBtn.Importance = widget.HighImportance
+		cancelBtn := widget.NewButton("Cancel", func() {
+			if d != nil {
+				d.Hide()
+			}
+		})
+		submitBtn.OnTapped = func() {
+			amt, _ := ui.ParseUint64(amount.Text)
+			if amt == 0 {
+				if vc.Feedback != nil {
+					vc.Feedback.Show(feedback.Error, "Amount must be > 0.")
 				}
-				amt, _ := ui.ParseUint64(amount.Text)
-				if amt == 0 {
-					dialog.ShowError(errors.New("amount must be > 0"), vc.Window)
-					return
-				}
-				go func() {
-					ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-					defer cancel()
-					_, err := service.SubmitOffer(ctx, vc.Snapshot(), service.SubmitOfferForm{
-						CIDObjectID: window.ID,
-						Amount:      amt,
-						Debug:       debug.Checked,
-					}, vc.Output)
+				return
+			}
+			submitBtn.Disable()
+			cancelBtn.Disable()
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+				defer cancel()
+				var buf bytes.Buffer
+				out := vc.TeeOutput(&buf)
+				_, err := service.SubmitOffer(ctx, vc.Snapshot(), service.SubmitOfferForm{
+					CIDObjectID: window.ID,
+					Amount:      amt,
+					Debug:       debug.Checked,
+				}, out)
+				fyne.Do(func() {
 					if err != nil {
-						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+						submitBtn.Enable()
+						cancelBtn.Enable()
+						if vc.Feedback != nil {
+							vc.Feedback.Show(feedback.Error, err.Error())
+						}
 						return
 					}
-					refresh()
-				}()
-			}, vc.Window)
-		d.Resize(fyne.NewSize(560, 260))
+					formPane.Hide()
+					successPane.Show()
+					content.Refresh()
+					submitBtn.Hide()
+					cancelBtn.SetText("Done")
+					cancelBtn.Enable()
+					cancelBtn.OnTapped = func() {
+						if d != nil {
+							d.Hide()
+						}
+					}
+					if vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Success, "Offer submitted successfully.")
+					}
+					refresh(false)
+					if onOffersChanged != nil {
+						onOffersChanged()
+					}
+				})
+			}()
+		}
+
+		footer := container.NewHBox(cancelBtn, layout.NewSpacer(), submitBtn)
+		body := container.NewBorder(nil, footer, nil, nil, content)
+		d = dialog.NewCustomWithoutButtons("Submit offer", body, vc.Window)
+		d.Resize(fyne.NewSize(560, 300))
 		d.Show()
 	}
 
-	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
+	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), func() { refresh(true) })
 	header := container.NewBorder(nil, nil, statusLbl, refreshBtn)
 	body := container.NewBorder(header, nil, nil, nil, table.CanvasObject())
 
-	refresh()
+	refresh(false)
 
 	// Auto-refresh every 60 s. The goroutine lives for the dashboard
 	// lifetime — acceptable because the dashboard is built once per
@@ -148,16 +235,16 @@ func buildOpenWindowsPanel(vc *ui.ViewContext) (fyne.CanvasObject, func()) {
 		t := time.NewTicker(60 * time.Second)
 		defer t.Stop()
 		for range t.C {
-			refresh()
+			refresh(false)
 		}
 	}()
 
-	return body, refresh
+	return body, func() { refresh(false) }
 }
 
 // ---- my offers ------------------------------------------------------------
 
-func buildMyOffersCard(vc *ui.ViewContext, onNew func()) fyne.CanvasObject {
+func buildMyOffersCard(vc *ui.ViewContext, onNew func()) (fyne.CanvasObject, func(bool)) {
 	table := components.NewDataTable(
 		[]components.DataColumn{
 			{Header: "CID"},
@@ -209,21 +296,38 @@ func buildMyOffersCard(vc *ui.ViewContext, onNew func()) fyne.CanvasObject {
 		})
 	}
 
-	refresh := func() {
+	refresh := func(showOKDialog bool) {
 		go func() {
 			snap := vc.Snapshot()
 			if strings.TrimSpace(snap.Address) == "" {
+				fyne.Do(func() {
+					if showOKDialog && vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Error, "Set your address in Identity first.")
+					}
+				})
 				return
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 			defer cancel()
 			ofs, err := service.MyOffersAsProvider(ctx, snap, snap.Address)
 			if err != nil {
-				fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+				fyne.Do(func() {
+					if vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Error, err.Error())
+					}
+				})
 				return
 			}
 			allOffers = ofs
 			rebuild()
+			if showOKDialog {
+				fyne.Do(func() {
+					countText := fmt.Sprintf("%d offer(s)", len(allOffers))
+					feedback.FlashStatus(statusLbl, "Refreshed", feedback.Success, func() {
+						statusLbl.SetText(countText)
+					}, 2*time.Second)
+				})
+			}
 		}()
 	}
 
@@ -237,33 +341,45 @@ func buildMyOffersCard(vc *ui.ViewContext, onNew func()) fyne.CanvasObject {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 					defer cancel()
+					var buf bytes.Buffer
+					out := vc.TeeOutput(&buf)
 					_, err := service.Withdraw(ctx, vc.Snapshot(), service.OfferIndexForm{
 						CIDObjectID: o.CIDObjectID,
 						Index:       uint64(o.Index),
-					}, vc.Output)
+					}, out)
 					if err != nil {
-						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+						fyne.Do(func() {
+							if vc.Feedback != nil {
+								vc.Feedback.Show(feedback.Error, err.Error())
+							}
+						})
 						return
 					}
-					refresh()
+					body := ui.RunSuccessBody("withdraw", "Withdraw", buf.String())
+					fyne.Do(func() {
+						if vc.Feedback != nil {
+							vc.Feedback.Show(feedback.Success, feedback.FirstLine(body))
+						}
+					})
+					refresh(false)
 				}()
 			}, vc.Window)
 	}
 
 	newBtn := widget.NewButton("New", onNew)
 	newBtn.Importance = widget.HighImportance
-	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), refresh)
+	refreshBtn := widget.NewButtonWithIcon("Refresh", ftheme.ViewRefreshIcon(), func() { refresh(true) })
 	toolbar := container.NewHBox(newBtn, refreshBtn)
 	header := container.NewBorder(nil, nil, statusLbl, toolbar)
 	body := container.NewBorder(header, nil, nil, nil, table.CanvasObject())
 
-	refresh()
+	refresh(false)
 
 	return components.CardStretch(theme.AccentProvider.Primary,
-		"My Offers",
-		"",
-		body,
-	)
+			"My Offers",
+			"",
+			body,
+		), refresh
 }
 
 // ---- helpers --------------------------------------------------------------

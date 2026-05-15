@@ -70,7 +70,7 @@ func CIDCreateView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			es, _ := ui.ParseUint64(epochStart.Text)
 			ee, _ := ui.ParseUint64(epochEnd.Text)
 			amt, _ := ui.ParseUint64(amount.Text)
@@ -85,8 +85,11 @@ func CIDCreateView(vc *ui.ViewContext) fyne.CanvasObject {
 			} else {
 				form.CID = cidEntry.Text
 			}
-			_, err := service.CIDCreate(ctx, snap, form, out)
-			return err
+			res, err := service.CIDCreate(ctx, snap, form, out)
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatCIDCreateResult(res), nil
 		})
 	return container.NewVBox(ui.Card("Create a new CID object", form), run)
 }

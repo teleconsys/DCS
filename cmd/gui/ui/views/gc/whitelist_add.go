@@ -20,7 +20,7 @@ func WhitelistAddView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	run := ui.RunButton(vc, "Add to whitelist", "whitelist add",
 		func() error { return member.Validate() },
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			return service.GCWhitelistAdd(ctx, snap, member.Text, out)
 		})
 	return container.NewVBox(ui.Card("Add member (GC-signed)", form), run)

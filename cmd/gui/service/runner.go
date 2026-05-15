@@ -19,7 +19,7 @@ import (
 // the view that owns the writer (the UI keeps the writer thread-safe).
 type Job struct {
 	Title string
-	Fn    func(ctx context.Context, out io.Writer) error
+	Fn    func(ctx context.Context, out io.Writer) (summary string, err error)
 }
 
 // Runner serializes Job execution per view: while one job is running, a
@@ -41,17 +41,18 @@ func (r *Runner) Busy() bool {
 }
 
 // Run starts the job in a goroutine. The `onDone` callback (if non-nil)
-// is invoked with the final error after Fn returns; callers typically
-// schedule this onto the UI thread themselves via fyne.Do.
+// is invoked after Fn returns with (summary, err). Summary is a short
+// user-facing success message when err is nil; callers may ignore it when
+// err is non-nil.
 //
 // Run returns immediately. If the runner is already busy, Run is a no-op
 // and onDone is invoked with an error.
-func (r *Runner) Run(ctx context.Context, out io.Writer, job Job, onDone func(error)) {
+func (r *Runner) Run(ctx context.Context, out io.Writer, job Job, onDone func(summary string, err error)) {
 	r.mu.Lock()
 	if r.running {
 		r.mu.Unlock()
 		if onDone != nil {
-			onDone(fmt.Errorf("another action is already running"))
+			onDone("", fmt.Errorf("another action is already running"))
 		}
 		return
 	}
@@ -65,7 +66,7 @@ func (r *Runner) Run(ctx context.Context, out io.Writer, job Job, onDone func(er
 			title = "action"
 		}
 		fmt.Fprintf(out, "▶ %s\n", title)
-		err := safeRun(ctx, out, job.Fn)
+		summary, err := safeRun(ctx, out, job.Fn)
 		if err != nil {
 			fmt.Fprintf(out, "✗ %s failed after %s: %v\n\n", title, time.Since(start).Round(time.Millisecond), err)
 		} else {
@@ -77,14 +78,14 @@ func (r *Runner) Run(ctx context.Context, out io.Writer, job Job, onDone func(er
 		r.mu.Unlock()
 
 		if onDone != nil {
-			onDone(err)
+			onDone(summary, err)
 		}
 	}()
 }
 
 // safeRun protects the goroutine from panics inside Fn so the runner
 // always releases its lock and the UI always gets a final callback.
-func safeRun(ctx context.Context, out io.Writer, fn func(ctx context.Context, out io.Writer) error) (err error) {
+func safeRun(ctx context.Context, out io.Writer, fn func(ctx context.Context, out io.Writer) (string, error)) (summary string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic: %v", r)

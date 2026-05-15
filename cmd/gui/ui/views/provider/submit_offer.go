@@ -37,14 +37,17 @@ func SubmitOfferView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			amt, _ := ui.ParseUint64(amount.Text)
-			_, err := service.SubmitOffer(ctx, snap, service.SubmitOfferForm{
+			d, err := service.SubmitOffer(ctx, snap, service.SubmitOfferForm{
 				CIDObjectID: cidID.Text,
 				Amount:      amt,
 				Debug:       debug.Checked,
 			}, out)
-			return err
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatTxDigest(d), nil
 		})
 	return container.NewVBox(ui.Card("Submit a storage offer", form), run)
 }

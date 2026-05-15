@@ -9,11 +9,11 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
+	"github.com/teleconsys/DCS/cmd/gui/ui/nativefile"
 )
 
 var hexAddressRe = regexp.MustCompile(`^0x[0-9a-fA-F]{64}$`)
@@ -112,29 +112,12 @@ func NewAliasSelect(actor state.Actor, onChosen func(state.AccountFile)) *widget
 }
 
 // FilePickerRow returns an entry that holds a file path and a "Browse…"
-// button that opens a native file dialog.
+// button that opens the OS file picker (Fyne's dialog only as fallback).
 func FilePickerRow(win fyne.Window, placeholder string) (entry *widget.Entry, container fyne.CanvasObject) {
 	e := widget.NewEntry()
 	e.SetPlaceHolder(placeholder)
 	btn := widget.NewButton("Browse…", func() {
-		dlg := dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
-			if err != nil {
-				dialog.ShowError(err, win)
-				return
-			}
-			if r == nil {
-				return
-			}
-			defer r.Close()
-			u := r.URI()
-			path := u.Path()
-			if path == "" {
-				path = u.String()
-			}
-			e.SetText(path)
-		}, win)
-		dlg.SetFilter(storage.NewExtensionFileFilter([]string{}))
-		dlg.Show()
+		nativefile.PickOpenFile(win, e, "Select file")
 	})
 	return e, container2(e, btn)
 }
@@ -146,12 +129,14 @@ func container2(left fyne.CanvasObject, right fyne.CanvasObject) fyne.CanvasObje
 // NewCopyButton returns a small button that copies `provider()`'s value
 // onto the clipboard.
 func NewCopyButton(win fyne.Window, label string, provider func() string) *widget.Button {
-	btn := widget.NewButton(label, func() {
+	var btn *widget.Button
+	btn = widget.NewButton(label, func() {
 		v := strings.TrimSpace(provider())
 		if v == "" {
 			return
 		}
 		win.Clipboard().SetContent(v)
+		feedback.CopyFlash(btn)
 	})
 	return btn
 }

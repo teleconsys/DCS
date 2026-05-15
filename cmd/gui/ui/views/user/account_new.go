@@ -22,14 +22,15 @@ func AccountNewView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	noFaucet := widget.NewCheck("Skip faucet", nil)
 
-	amount := ui.NewAmountEntry("faucet amount (optional, 0 = server default)", true)
+	amount := ui.NewAmountEntry("optional, 0 = server default", true)
 
 	form := widget.NewForm(
 		widget.NewFormItem("Alias", alias),
 		widget.NewFormItem("", noFaucet),
-		widget.NewFormItem("Faucet amount", amount),
+		widget.NewFormItem("Faucet (nanos)", amount),
 	)
 
+	result := ui.NewResultLabel()
 	run := ui.RunButton(vc, "Create account", "account new",
 		func() error {
 			if strings.TrimSpace(alias.Text) == "" {
@@ -37,16 +38,21 @@ func AccountNewView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			amt, _ := ui.ParseUint64(amount.Text)
-			_, err := service.NewAccount(ctx, service.NewAccountForm{
+			acc, err := service.NewAccount(ctx, service.NewAccountForm{
 				Alias:        alias.Text,
 				NoFaucet:     noFaucet.Checked,
 				FaucetAmount: amt,
 				Role:         state.ActorUser,
 				FaucetURL:    snap.FaucetURL,
 			}, out)
-			return err
-		})
-	return container.NewVBox(ui.Card("Generate a new User account", form), run)
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatAccountNewResult(acc), nil
+		}, ui.RunOpts{ResultLabel: result})
+	run.Importance = widget.HighImportance
+
+	return container.NewVBox(form, result, ui.ActionRow(run))
 }

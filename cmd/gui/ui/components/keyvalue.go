@@ -7,6 +7,8 @@ import (
 	"fyne.io/fyne/v2/container"
 	ftheme "fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 )
 
 // KeyValueRow renders a "label: value" pair, optionally with a copy
@@ -22,8 +24,10 @@ func KeyValueRow(win fyne.Window, label, value string, copyable bool) fyne.Canva
 	if !copyable || strings.TrimSpace(value) == "" || win == nil {
 		return container.NewBorder(nil, nil, keyLbl, nil, valLbl)
 	}
-	copyBtn := widget.NewButtonWithIcon("", ftheme.ContentCopyIcon(), func() {
+	var copyBtn *widget.Button
+	copyBtn = widget.NewButtonWithIcon("", ftheme.ContentCopyIcon(), func() {
 		win.Clipboard().SetContent(value)
+		feedback.CopyFlash(copyBtn)
 	})
 	copyBtn.Importance = widget.LowImportance
 	return container.NewBorder(nil, nil, keyLbl, copyBtn, valLbl)

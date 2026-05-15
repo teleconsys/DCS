@@ -53,6 +53,14 @@ func Card(accent color.Color, title, subtitle string, body fyne.CanvasObject, ac
 // CardSeparatorStroke is like Card but uses the same stroke tone as UI
 // separators instead of the actor accent (for tiles where accent + badge is noisy).
 func CardSeparatorStroke(title, subtitle string, body fyne.CanvasObject, actions ...fyne.CanvasObject) fyne.CanvasObject {
+	var footer fyne.CanvasObject
+	if len(actions) > 0 {
+		footer = container.NewHBox(actions...)
+	}
+	if title == "" && subtitle == "" {
+		return TileCard(body, footer)
+	}
+
 	titleLbl := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	var head fyne.CanvasObject = titleLbl
 	if subtitle != "" {
@@ -65,8 +73,8 @@ func CardSeparatorStroke(title, subtitle string, body fyne.CanvasObject, actions
 	if body != nil {
 		parts = append(parts, widget.NewSeparator(), body)
 	}
-	if len(actions) > 0 {
-		parts = append(parts, widget.NewSeparator(), container.NewHBox(actions...))
+	if footer != nil {
+		parts = append(parts, widget.NewSeparator(), footer)
 	}
 
 	inner := container.NewPadded(container.NewVBox(parts...))

@@ -27,14 +27,17 @@ func WithdrawView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	run := ui.RunButton(vc, "Withdraw", "withdraw",
 		func() error { return cidID.Validate() },
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			i, _ := ui.ParseUint64(idx.Text)
-			_, err := service.Withdraw(ctx, snap, service.OfferIndexForm{
+			d, err := service.Withdraw(ctx, snap, service.OfferIndexForm{
 				CIDObjectID: cidID.Text,
 				Index:       i,
 				Debug:       debug.Checked,
 			}, out)
-			return err
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatTxDigest(d), nil
 		})
 	return container.NewVBox(ui.Card("Withdraw payment", form), run)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/service"
 	"github.com/teleconsys/DCS/cmd/gui/state"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 )
 
 // ActorShell bundles the per-actor live objects used to wire dashboards
@@ -34,12 +35,13 @@ func NewActorShell(app *state.AppState, actor state.Actor) *ActorShell {
 }
 
 // NewViewContext returns a ui.ViewContext bound to this shell.
-func (s *ActorShell) NewViewContext(win fyne.Window, app *state.AppState) *ui.ViewContext {
+func (s *ActorShell) NewViewContext(win fyne.Window, app *state.AppState, fb *feedback.Host) *ui.ViewContext {
 	return &ui.ViewContext{
-		Window:  win,
-		Output:  io.Discard,
-		Runner:  s.Runner,
-		Profile: s.Profile,
-		App:     app,
+		Window:   win,
+		Output:   io.Discard,
+		Runner:   s.Runner,
+		Profile:  s.Profile,
+		App:      app,
+		Feedback: fb,
 	}
 }

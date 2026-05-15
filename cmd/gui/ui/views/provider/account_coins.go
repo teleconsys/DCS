@@ -23,6 +23,7 @@ func AccountCoinsView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	form := widget.NewForm(widget.NewFormItem("Address", address))
 
+	result := ui.NewResultLabel()
 	run := ui.RunButton(vc, "List coins", "account coins",
 		func() error {
 			if strings.TrimSpace(address.Text) == "" {
@@ -30,9 +31,13 @@ func AccountCoinsView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return address.Validate()
 		},
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
-			_, err := service.AccountCoins(ctx, snap.RPCURL, strings.TrimSpace(address.Text), 25*time.Second, out)
-			return err
-		})
-	return container.NewVBox(ui.Card("List owned coin objects", form), run)
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
+			res, err := service.AccountCoins(ctx, snap.RPCURL, strings.TrimSpace(address.Text), 25*time.Second, out)
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatAccountCoinsResult(res), nil
+		}, ui.RunOpts{ResultLabel: result})
+
+	return container.NewVBox(form, result, ui.ActionRow(run))
 }

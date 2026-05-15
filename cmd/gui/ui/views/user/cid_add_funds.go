@@ -38,10 +38,13 @@ func CIDAddFundsView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			amt, _ := ui.ParseUint64(amount.Text)
-			_, err := service.CIDAddFunds(ctx, snap, cidID.Text, amt, out)
-			return err
+			d, err := service.CIDAddFunds(ctx, snap, cidID.Text, amt, out)
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatTxDigest(d), nil
 		})
 	return container.NewVBox(ui.Card("Top up a CID storage budget", form), run)
 }

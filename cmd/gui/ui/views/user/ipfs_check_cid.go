@@ -22,6 +22,7 @@ func IPFSCheckCIDView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	form := widget.NewForm(widget.NewFormItem("CID", cidEntry))
 
+	result := ui.NewResultLabel()
 	run := ui.RunButton(vc, "Check CID", "ipfs check-cid",
 		func() error {
 			if strings.TrimSpace(cidEntry.Text) == "" {
@@ -29,9 +30,15 @@ func IPFSCheckCIDView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, _ state.ActorProfile) error {
-			_, err := service.CheckCid(ctx, cidEntry.Text, out)
-			return err
-		})
-	return container.NewVBox(ui.Card("Is a CID pinned locally?", form), run)
+		func(ctx context.Context, out io.Writer, _ state.ActorProfile) (string, error) {
+			pinned, err := service.CheckCid(ctx, cidEntry.Text, out)
+			if err != nil {
+				return "", err
+			}
+			if pinned {
+				return "This CID is pinned on the local IPFS node.", nil
+			}
+			return "This CID is not pinned on the local IPFS node.", nil
+		}, ui.RunOpts{ResultLabel: result})
+	return container.NewVBox(ui.Card("Is a CID pinned locally?", form), result, run)
 }

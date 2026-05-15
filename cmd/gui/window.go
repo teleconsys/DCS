@@ -7,6 +7,7 @@ import (
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
 	"github.com/teleconsys/DCS/cmd/gui/theme"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/gc"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/provider"
@@ -23,11 +24,13 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 		state.ActorProvider: shell.NewActorShell(app, state.ActorProvider),
 	}
 
+	fb := feedback.NewHost()
+
 	var bar *shell.AppBar
-	bar = shell.NewAppBar(win, app, t,
+	bar = shell.NewAppBar(win, app, t, fb,
 		func() {
 			act := app.Registry.Current()
-			vc := shells[act].NewViewContext(win, app)
+			vc := shells[act].NewViewContext(win, app, fb)
 			shell.OpenIdentity(win, app, act, vc, func() {
 				bar.Refresh(act)
 			})
@@ -36,15 +39,15 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 
 	bodies := make(map[state.Actor]fyne.CanvasObject, 3)
 	bodies[state.ActorGC] = container.NewPadded(
-		gc.Dashboard(shells[state.ActorGC].NewViewContext(win, app)),
+		gc.Dashboard(shells[state.ActorGC].NewViewContext(win, app, fb)),
 	)
 	bodies[state.ActorProvider] = container.NewPadded(
-		provider.Dashboard(shells[state.ActorProvider].NewViewContext(win, app)),
+		provider.Dashboard(shells[state.ActorProvider].NewViewContext(win, app, fb)),
 	)
 	bodies[state.ActorUser] = container.NewPadded(
-		user.Dashboard(shells[state.ActorUser].NewViewContext(win, app)),
+		user.Dashboard(shells[state.ActorUser].NewViewContext(win, app, fb)),
 	)
-	demoBody := buildDemo(win, app, shells)
+	demoBody := buildDemo(win, app, shells, fb)
 
 	gcTab := container.NewTabItemWithIcon("Admin", ftheme.SettingsIcon(), bodies[state.ActorGC])
 	userTab := container.NewTabItemWithIcon("User", ftheme.AccountIcon(), bodies[state.ActorUser])
@@ -84,7 +87,8 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 
 	root := container.NewBorder(
 		bar.CanvasObject(),
-		nil, nil, nil,
+		fb.CanvasObject(),
+		nil, nil,
 		tabs,
 	)
 	win.SetContent(container.NewStack(root))

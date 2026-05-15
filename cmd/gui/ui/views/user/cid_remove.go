@@ -20,9 +20,12 @@ func CIDRemoveView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	run := ui.RunButton(vc, "Remove", "cid remove",
 		func() error { return cidID.Validate() },
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
-			_, err := service.CIDRemove(ctx, snap, cidID.Text, out)
-			return err
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
+			d, err := service.CIDRemove(ctx, snap, cidID.Text, out)
+			if err != nil {
+				return "", err
+			}
+			return ui.FormatTxDigest(d), nil
 		})
 	return container.NewVBox(ui.Card("Remove a CID from the list", form), run)
 }

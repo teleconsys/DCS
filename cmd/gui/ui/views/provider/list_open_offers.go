@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"fyne.io/fyne/v2"
@@ -19,9 +20,12 @@ func ListOpenOffersView(vc *ui.ViewContext) fyne.CanvasObject {
 	desc.Wrapping = fyne.TextWrapWord
 
 	run := ui.RunButton(vc, "Refresh", "list-open-offers", nil,
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
-			_, err := service.ListOpenOffers(ctx, snap, out)
-			return err
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
+			items, err := service.ListOpenOffers(ctx, snap, out)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("Found %d open offer window(s).", len(items)), nil
 		})
 	return container.NewVBox(ui.Card("Open offer windows", desc), run)
 }

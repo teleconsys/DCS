@@ -3,10 +3,12 @@ package main
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
+	ftheme "fyne.io/fyne/v2/theme"
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 	"github.com/teleconsys/DCS/cmd/gui/ui/shell"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/provider"
 	"github.com/teleconsys/DCS/cmd/gui/ui/views/user"
@@ -63,18 +65,18 @@ func (demoHostLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 
 // buildDemo lays out User and Provider side-by-side. The User side uses
 // DashboardForDemo: single-column My CIDs only (no IPFS/Tools rail).
-func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*shell.ActorShell) fyne.CanvasObject {
-	userVC := shells[state.ActorUser].NewViewContext(win, app)
-	provVC := shells[state.ActorProvider].NewViewContext(win, app)
+func buildDemo(win fyne.Window, app *state.AppState, shells map[state.Actor]*shell.ActorShell, fb *feedback.Host) fyne.CanvasObject {
+	userVC := shells[state.ActorUser].NewViewContext(win, app, fb)
+	provVC := shells[state.ActorProvider].NewViewContext(win, app, fb)
 
 	userBody := user.DashboardForDemo(userVC)
 	provBody := provider.Dashboard(provVC)
 
-	leftHdr := widget.NewLabelWithStyle("◀ User", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	rightHdr := widget.NewLabelWithStyle("Provider ▶", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	userHdr := components.DemoPaneHeader("User", theme.AccentUser.Primary, ftheme.AccountIcon())
+	provHdr := components.DemoPaneHeader("Provider", theme.AccentProvider.Primary, ftheme.StorageIcon())
 
-	left := container.New(demoSideClamp{MinW: 240}, container.NewBorder(leftHdr, nil, nil, nil, container.NewPadded(userBody)))
-	right := container.New(demoSideClamp{MinW: 240}, container.NewBorder(rightHdr, nil, nil, nil, container.NewPadded(provBody)))
+	left := container.New(demoSideClamp{MinW: 240}, container.NewBorder(userHdr, nil, nil, nil, container.NewPadded(userBody)))
+	right := container.New(demoSideClamp{MinW: 240}, container.NewBorder(provHdr, nil, nil, nil, container.NewPadded(provBody)))
 	split := components.NewPillHSplit(left, right)
 	split.SetOffset(0.5)
 	return container.New(demoHostLayout{}, split)

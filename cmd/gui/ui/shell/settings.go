@@ -2,7 +2,6 @@ package shell
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/teleconsys/DCS/cmd/gui/service"
 	"github.com/teleconsys/DCS/cmd/gui/state"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 )
 
 // OpenAppSettings shows a modal with application-wide settings. For now
@@ -21,7 +21,7 @@ import (
 // the connection indicator (via onRPCSaved), and closes the dialog.
 // Cancel closes without applying edits.
 // "Ping RPC" tests the URL currently in the RPC field (saved or not).
-func OpenAppSettings(win fyne.Window, app *state.AppState, onRPCSaved func()) {
+func OpenAppSettings(win fyne.Window, app *state.AppState, fb *feedback.Host, onRPCSaved func()) {
 	if app == nil {
 		return
 	}
@@ -44,7 +44,10 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, onRPCSaved func()) {
 	pingBtn = widget.NewButton("Ping RPC", func() {
 		url := strings.TrimSpace(rpc.Text)
 		if url == "" {
-			dialog.ShowError(errors.New("enter an RPC URL"), win)
+			feedback.ApplyLabel(pingLbl, "Enter an RPC URL.", feedback.Error)
+			if fb != nil {
+				fb.Show(feedback.Error, "Enter an RPC URL.")
+			}
 			return
 		}
 		to, err := time.ParseDuration(strings.TrimSpace(timeout.Text))
@@ -61,14 +64,13 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, onRPCSaved func()) {
 			fyne.Do(func() {
 				pingBtn.Enable()
 				if err != nil {
-					dialog.ShowError(err, win)
-					pingLbl.SetText("")
+					feedback.ApplyLabel(pingLbl, err.Error(), feedback.Error)
 					return
 				}
 				if msg != "" {
-					pingLbl.SetText(msg)
+					feedback.ApplyLabel(pingLbl, msg, feedback.Success)
 				} else {
-					pingLbl.SetText("OK")
+					feedback.ApplyLabel(pingLbl, "RPC responded successfully.", feedback.Success)
 				}
 			})
 		}()
@@ -82,6 +84,9 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, onRPCSaved func()) {
 		}
 		if d != nil {
 			d.Hide()
+		}
+		if fb != nil {
+			fb.Show(feedback.Success, "RPC URL saved for all roles.")
 		}
 	})
 	saveBtn.Importance = widget.HighImportance

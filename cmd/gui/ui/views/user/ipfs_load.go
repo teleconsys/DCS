@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -20,6 +21,7 @@ func IPFSLoadView(vc *ui.ViewContext) fyne.CanvasObject {
 	path, pathRow := ui.FilePickerRow(vc.Window, "/path/to/file")
 	form := widget.NewForm(widget.NewFormItem("File", pathRow))
 
+	result := ui.NewResultLabel()
 	run := ui.RunButton(vc, "Upload to IPFS", "ipfs load-file",
 		func() error {
 			if strings.TrimSpace(path.Text) == "" {
@@ -27,9 +29,12 @@ func IPFSLoadView(vc *ui.ViewContext) fyne.CanvasObject {
 			}
 			return nil
 		},
-		func(ctx context.Context, out io.Writer, _ state.ActorProfile) error {
-			_, err := service.LoadFile(ctx, path.Text, out)
-			return err
-		})
-	return container.NewVBox(ui.Card("Upload + pin a file on the local IPFS node", form), run)
+		func(ctx context.Context, out io.Writer, _ state.ActorProfile) (string, error) {
+			cid, err := service.LoadFile(ctx, path.Text, out)
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("File pinned on IPFS.\n\nCID:\n%s", cid), nil
+		}, ui.RunOpts{ResultLabel: result})
+	return container.NewVBox(ui.Card("Upload + pin a file on the local IPFS node", form), result, run)
 }

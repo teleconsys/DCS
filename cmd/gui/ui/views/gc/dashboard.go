@@ -18,19 +18,21 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
 	"github.com/teleconsys/DCS/cmd/gui/ui/components"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 )
 
-// Dashboard is the Admin workspace: whitelist members and a lookup tab
-// for checking whether an address is on the whitelist.
+// Dashboard is the Admin workspace: whitelist, membership lookup, and CID list tools.
 func Dashboard(vc *ui.ViewContext) fyne.CanvasObject {
 	members := tabContentWithTopGap(buildWhitelistMembers(vc))
 	lookup := tabContentWithTopGap(container.NewVScroll(ui.TopBound(WhitelistHasView(vc))))
+	cidList := tabContentWithTopGap(container.NewVScroll(ui.TopBound(CIDIsInListView(vc))))
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Members", members),
 		container.NewTabItem("Lookup", lookup),
+		container.NewTabItem("CID list", cidList),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
-	return container.NewStack(components.CardStretch(theme.AccentGC.Primary, "Whitelist", "", tabs))
+	return container.NewStack(components.CardStretch(theme.AccentGC.Primary, "Admin", "", tabs))
 }
 
 // tabContentWithTopGap keeps a fixed gap under the AppTabs bar, then gives
@@ -79,7 +81,10 @@ func buildWhitelistMembers(vc *ui.ViewContext) fyne.CanvasObject {
 			members, err := service.WhitelistMembers(ctx, vc.Snapshot())
 			if err != nil {
 				fyne.Do(func() {
-					dialog.ShowError(fmt.Errorf("list members: %w", err), vc.Window)
+					statusLbl.SetText("List failed")
+					if vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Error, err.Error())
+					}
 				})
 				return
 			}
@@ -97,18 +102,29 @@ func buildWhitelistMembers(vc *ui.ViewContext) fyne.CanvasObject {
 					return
 				}
 				if err := addr.Validate(); err != nil {
-					dialog.ShowError(err, vc.Window)
+					if vc.Feedback != nil {
+						vc.Feedback.Show(feedback.Error, err.Error())
+					}
 					return
 				}
 				member := strings.TrimSpace(addr.Text)
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 					defer cancel()
-					if err := service.GCWhitelistAdd(ctx, vc.Snapshot(), member, vc.Output); err != nil {
-						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+					out := vc.TeeOutput(nil)
+					_, err := service.GCWhitelistAdd(ctx, vc.Snapshot(), member, out)
+					if err != nil {
+						fyne.Do(func() {
+							if vc.Feedback != nil {
+								vc.Feedback.Show(feedback.Error, err.Error())
+							}
+						})
 						return
 					}
-					refresh()
+					fyne.Do(func() {
+						feedback.FlashStatus(statusLbl, "Member added", feedback.Success, nil, 2*time.Second)
+						refresh()
+					})
 				}()
 			}, vc.Window)
 		d.Resize(fyne.NewSize(480, 200))
@@ -125,11 +141,20 @@ func buildWhitelistMembers(vc *ui.ViewContext) fyne.CanvasObject {
 				go func() {
 					ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 					defer cancel()
-					if err := service.GCWhitelistRemove(ctx, vc.Snapshot(), member, vc.Output); err != nil {
-						fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+					out := vc.TeeOutput(nil)
+					_, err := service.GCWhitelistRemove(ctx, vc.Snapshot(), member, out)
+					if err != nil {
+						fyne.Do(func() {
+							if vc.Feedback != nil {
+								vc.Feedback.Show(feedback.Error, err.Error())
+							}
+						})
 						return
 					}
-					refresh()
+					fyne.Do(func() {
+						feedback.FlashStatus(statusLbl, "Member removed", feedback.Success, nil, 2*time.Second)
+						refresh()
+					})
 				}()
 			}, vc.Window)
 	}

@@ -20,7 +20,7 @@ func WhitelistRemoveView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	run := ui.RunButton(vc, "Remove from whitelist", "whitelist remove",
 		func() error { return member.Validate() },
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
 			return service.GCWhitelistRemove(ctx, snap, member.Text, out)
 		})
 	return container.NewVBox(ui.Card("Remove member (GC-signed)", form), run)

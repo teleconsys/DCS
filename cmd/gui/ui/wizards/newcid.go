@@ -6,7 +6,6 @@ package wizards
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +18,8 @@ import (
 
 	"github.com/teleconsys/DCS/cmd/gui/service"
 	"github.com/teleconsys/DCS/cmd/gui/ui"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
+	"github.com/teleconsys/DCS/cmd/gui/ui/nativefile"
 )
 
 // NewCIDWizard launches the "Create new CID" wizard. It walks the
@@ -41,14 +42,7 @@ func NewCIDWizard(vc *ui.ViewContext, onDone func()) {
 	filePath := widget.NewEntry()
 	filePath.SetPlaceHolder("/path/to/file")
 	pickBtn := widget.NewButtonWithIcon("Browse…", ftheme.FolderOpenIcon(), func() {
-		d := dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
-			if err != nil || r == nil {
-				return
-			}
-			defer r.Close()
-			filePath.SetText(r.URI().Path())
-		}, vc.Window)
-		d.Show()
+		nativefile.PickOpenFile(vc.Window, filePath, "Select file", vc.Feedback)
 	})
 	pathRow := container.NewBorder(nil, nil, nil, pickBtn, filePath)
 
@@ -110,36 +104,44 @@ func NewCIDWizard(vc *ui.ViewContext, onDone func()) {
 	)
 	scroll := container.NewVScroll(formBody)
 
-	d := dialog.NewCustomConfirm("Create new CID", "Create", "Cancel", scroll,
+	var dlg dialog.Dialog
+	dlg = dialog.NewCustomConfirm("Create new CID", "Create", "Cancel", scroll,
 		func(ok bool) {
 			if !ok {
 				return
 			}
 			f, err := collectForm(srcRadio, filePath, cidEntry, autoEpoch, epochStart, epochEnd, amount)
 			if err != nil {
-				dialog.ShowError(err, vc.Window)
+				if vc.Feedback != nil {
+					vc.Feedback.Show(feedback.Error, err.Error())
+				}
 				return
 			}
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 				defer cancel()
-				res, err := service.CIDCreate(ctx, vc.Snapshot(), f, vc.Output)
+				out := vc.TeeOutput(nil)
+				_, err := service.CIDCreate(ctx, vc.Snapshot(), f, out)
 				if err != nil {
-					fyne.Do(func() { dialog.ShowError(err, vc.Window) })
+					fyne.Do(func() {
+						if vc.Feedback != nil {
+							vc.Feedback.Show(feedback.Error, err.Error())
+						}
+					})
 					return
 				}
 				fyne.Do(func() {
+					if dlg != nil {
+						dlg.Hide()
+					}
 					if onDone != nil {
 						onDone()
 					}
-					dialog.ShowInformation("CID created",
-						fmt.Sprintf("CID %s\nObject %s", res.CIDStr, res.CIDID),
-						vc.Window)
 				})
 			}()
 		}, vc.Window)
-	d.Resize(fyne.NewSize(720, 620))
-	d.Show()
+	dlg.Resize(fyne.NewSize(720, 620))
+	dlg.Show()
 }
 
 func collectForm(srcRadio *widget.RadioGroup, filePath, cidEntry *widget.Entry,

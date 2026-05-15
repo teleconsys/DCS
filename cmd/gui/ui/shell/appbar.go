@@ -15,6 +15,7 @@ import (
 
 	"github.com/teleconsys/DCS/cmd/gui/state"
 	"github.com/teleconsys/DCS/cmd/gui/theme"
+	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
@@ -50,7 +51,7 @@ type AppBar struct {
 // re-pings the RPC every 30 s. Call Stop on app shutdown to stop the
 // ticker cleanly (not strictly required: the goroutine is bounded by
 // the app lifetime).
-func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, onIdentity func()) *AppBar {
+func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, fb *feedback.Host, onIdentity func()) *AppBar {
 	b := &AppBar{
 		win:  win,
 		app:  app,
@@ -71,7 +72,7 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, onIdentity 
 	b.idBtn.Importance = widget.LowImportance
 
 	settingsBtn := widget.NewButtonWithIcon("", ftheme.SettingsIcon(), func() {
-		OpenAppSettings(win, app, func() {
+		OpenAppSettings(win, app, fb, func() {
 			b.Refresh(app.Registry.Current())
 		})
 	})

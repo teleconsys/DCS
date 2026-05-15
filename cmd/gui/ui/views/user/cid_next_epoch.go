@@ -21,8 +21,11 @@ func CIDNextEpochView(vc *ui.ViewContext) fyne.CanvasObject {
 
 	run := ui.RunButton(vc, "Transition", "cid next-epoch",
 		func() error { return cidID.Validate() },
-		func(ctx context.Context, out io.Writer, snap state.ActorProfile) error {
-			return service.CIDTransitionEpoch(ctx, snap, cidID.Text, out)
+		func(ctx context.Context, out io.Writer, snap state.ActorProfile) (string, error) {
+			if err := service.CIDTransitionEpoch(ctx, snap, cidID.Text, out); err != nil {
+				return "", err
+			}
+			return "Epoch transition submitted.", nil
 		})
 	return container.NewVBox(ui.Card("Advance to the next epoch", form), run)
 }

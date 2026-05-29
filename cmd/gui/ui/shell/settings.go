@@ -16,6 +16,11 @@ import (
 	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
 )
 
+const (
+	ipfsStatusRunning = "Running"
+	ipfsStatusStopped = "Stopped"
+)
+
 // OpenAppSettings shows a modal with application-wide settings. For now
 // this is the chain RPC URL. Save writes it to all actor profiles, refreshes
 // the connection indicator (via onRPCSaved), and closes the dialog.
@@ -77,11 +82,14 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, fb *feedback.Host, on
 	})
 
 	var d dialog.Dialog
+	ipfsRow, cleanupIPFS := newIPFSDaemonRow(fb)
+
 	saveBtn := widget.NewButton("Save", func() {
 		reg.SyncRPCURL(rpc.Text)
 		if onRPCSaved != nil {
 			fyne.Do(onRPCSaved)
 		}
+		cleanupIPFS()
 		if d != nil {
 			d.Hide()
 		}
@@ -92,6 +100,7 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, fb *feedback.Host, on
 	saveBtn.Importance = widget.HighImportance
 
 	cancelBtn := widget.NewButton("Cancel", func() {
+		cleanupIPFS()
 		if d != nil {
 			d.Hide()
 		}
@@ -107,10 +116,12 @@ func OpenAppSettings(win fyne.Window, app *state.AppState, fb *feedback.Host, on
 		pingRow,
 		pingLbl,
 		widget.NewSeparator(),
+		ipfsRow,
+		widget.NewSeparator(),
 		buttons,
 	)
 
 	d = dialog.NewCustomWithoutButtons("Settings", body, win)
-	d.Resize(fyne.NewSize(480, 320))
+	d.Resize(fyne.NewSize(480, 360))
 	d.Show()
 }

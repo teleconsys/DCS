@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 	"github.com/teleconsys/DCS/internal/wallet"
 )
@@ -265,13 +266,15 @@ func CreateCID(ctx context.Context, p CreateParams, cidCoinId string) ([]byte, s
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, "", fmt.Errorf("execute: %w", err)
+		return nil, "", dcserrors.Wrap("create_cid", err)
+	}
+	if err := dcserrors.TxError("create_cid", rsp); err != nil {
+		return nil, "", err
 	}
 
-	// Extract CID object ID from response
 	cidId, err := extractCidIdFromResponse(rsp)
 	if err != nil {
-		return nil, "", fmt.Errorf("extract CID object ID: %w", err)
+		return nil, "", fmt.Errorf("Create CID failed: no CID was created — the caller may not be on the whitelist")
 	}
 
 	b, _ := json.Marshal(rsp)
@@ -322,7 +325,10 @@ func AddToCIDList(ctx context.Context, p CreateParams, cidId string) ([]byte, er
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, fmt.Errorf("execute: %w", err)
+		return nil, dcserrors.Wrap("add_to_cidlist", err)
+	}
+	if err := dcserrors.TxError("add_to_cidlist", rsp); err != nil {
+		return nil, err
 	}
 
 	b, _ := json.Marshal(rsp)

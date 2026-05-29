@@ -8,6 +8,7 @@ import (
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 )
 
@@ -67,7 +68,10 @@ func RemoveFromWhitelist(ctx context.Context, p RemoveParams) (out []byte, notPr
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, false, fmt.Errorf("execute: %w", err)
+		return nil, false, dcserrors.Wrap("remove_id_from_whitelist", err)
+	}
+	if err := dcserrors.TxError("remove_id_from_whitelist", rsp); err != nil {
+		return nil, false, err
 	}
 
 	b, _ := json.Marshal(rsp)

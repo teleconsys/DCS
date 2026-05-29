@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 	"github.com/teleconsys/DCS/internal/wallet"
 )
@@ -162,13 +163,10 @@ func AddFunds(ctx context.Context, p AddFundsParams) ([]byte, error) {
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, fmt.Errorf("execute: %w", err)
+		return nil, dcserrors.Wrap("deposit_funds", err)
 	}
-
-	// Validate transaction status
-	ok, reason := txStatusOK(rsp)
-	if !ok {
-		return nil, fmt.Errorf("deposit_funds transaction failed: %s", reason)
+	if err := dcserrors.TxError("deposit_funds", rsp); err != nil {
+		return nil, err
 	}
 
 	b, _ := json.Marshal(rsp)

@@ -9,6 +9,7 @@ import (
 
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 	"github.com/teleconsys/DCS/internal/wallet"
 )
@@ -163,21 +164,19 @@ func HonorOffer(ctx context.Context, p HonorOfferParams) (*suitypes.SuiTransacti
 
 	resp, err := w.ExecuteTransactionBlock(ctx, txB64, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, fmt.Errorf("execute: %w", err)
+		return nil, dcserrors.Wrap("honor_offer", err)
 	}
-
-	ok, reason := txStatusOK(resp)
+	if err := dcserrors.TxError("honor_offer", resp); err != nil {
+		if p.Debug {
+			fmt.Println("== tx status ==")
+			fmt.Println("status: failure")
+			fmt.Println(err.Error())
+		}
+		return nil, err
+	}
 	if p.Debug {
 		fmt.Println("== tx status ==")
-		if ok {
-			fmt.Println("status: success")
-		} else {
-			fmt.Printf("status: failure\nreason: %s\n", reason)
-		}
-	}
-
-	if !ok {
-		return nil, fmt.Errorf("approve_offer aborted: %s", reason)
+		fmt.Println("status: success")
 	}
 	return resp, nil
 }

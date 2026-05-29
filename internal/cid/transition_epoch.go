@@ -11,6 +11,7 @@ import (
 	suitypes "github.com/coming-chat/go-sui/v2/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 	"github.com/teleconsys/DCS/internal/wallet"
 )
@@ -128,16 +129,10 @@ func TransitionEpoch(ctx context.Context, p TransitionParams, cidObjectID string
 
 	resp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return false, fmt.Errorf("execute: %w", err)
+		return false, dcserrors.Wrap("transition_epoch", err)
 	}
-
-	// Check transaction status and extract error details if failed
-	ok, reason := txStatusOK(resp)
-	if !ok {
-		if reason != "" {
-			return false, fmt.Errorf("transition_epoch failed: %s", reason)
-		}
-		return false, fmt.Errorf("transition_epoch failed: transaction execution returned failure status")
+	if err := dcserrors.TxError("transition_epoch", resp); err != nil {
+		return false, err
 	}
 
 	return true, nil

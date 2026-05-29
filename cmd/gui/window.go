@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	ftheme "fyne.io/fyne/v2/theme"
 
+	"github.com/teleconsys/DCS/cmd/gui/service/ipfsdaemon"
 	"github.com/teleconsys/DCS/cmd/gui/state"
 	"github.com/teleconsys/DCS/cmd/gui/theme"
 	"github.com/teleconsys/DCS/cmd/gui/ui/feedback"
@@ -92,4 +93,12 @@ func buildMainWindow(win fyne.Window, app *state.AppState, t *theme.Theme) {
 		tabs,
 	)
 	win.SetContent(container.NewStack(root))
+
+	win.SetCloseIntercept(func() {
+		ipfsdaemon.Shutdown()
+		bar.Stop()
+		win.Close()
+	})
+
+	go ipfsdaemon.AutoStart()
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/teleconsys/DCS/internal/dcserrors"
 	"github.com/teleconsys/DCS/internal/rebased"
 	"github.com/teleconsys/DCS/internal/wallet"
 )
@@ -147,7 +148,10 @@ func RemoveCID(ctx context.Context, p RemoveParams) ([]byte, error) {
 
 	rsp, err := w.ExecuteTransactionBlock(ctx, base64Tx, []any{sigB64}, opts, reqType)
 	if err != nil {
-		return nil, fmt.Errorf("execute: %w", err)
+		return nil, dcserrors.Wrap("remove_from_cidlist", err)
+	}
+	if err := dcserrors.TxError("remove_from_cidlist", rsp); err != nil {
+		return nil, err
 	}
 
 	b, _ := json.Marshal(rsp)

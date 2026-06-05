@@ -1,0 +1,268 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2395.1" height="1328.2" viewBox="-0.2 -47 1803 999" font-family="'Segoe UI', system-ui, sans-serif">
+
+  <!-- Background -->
+  <rect x="-0.2" y="-47" width="1803" height="999" fill="#0F0F1A" rx="0.0"/>
+
+  <!-- Title area -->
+  <text x="79.8" y="56" font-size="26" font-weight="700" fill="#FFFFFF" letter-spacing="-0.5">DCS — CID Lifecycle</text>
+  <text x="79.8" y="82" font-size="13" fill="#6B6B8A">Distributed Content Security · offer lifecycle across epoch windows</text>
+
+  <!-- ─── Section 1: Parties ─── -->
+  <rect x="79.8" y="128" width="1642.95" height="104" rx="13.3" fill="#12121E" stroke="#2A2A40" stroke-width="0.67"/>
+  <line x1="627.45" y1="140" x2="627.45" y2="220" stroke="#2A2A40" stroke-width="1" opacity="0.7"/>
+  <line x1="1175.1" y1="140" x2="1175.1" y2="220" stroke="#2A2A40" stroke-width="1" opacity="0.7"/>
+
+  <!-- Ground Control -->
+  <rect x="100" y="148" width="13.3" height="70" rx="2.66" fill="#888780"/>
+  <text x="124" y="158" font-size="12" font-weight="600" fill="#B4B2A9">Ground Control</text>
+  <text x="124" y="174" font-size="11" fill="#888780">On-chain contract admin; controls who may use DCS</text>
+  <text x="124" y="190" font-size="11" fill="#5F5E5A">Adds or removes user and provider addresses on the whitelist</text>
+  <text x="124" y="206" font-size="11" fill="#5F5E5A">CLI calls the GC API — requests are signed server-side, not by the caller</text>
+
+  <!-- User -->
+  <rect x="647.45" y="148" width="13.3" height="70" rx="2.66" fill="#1E55A8"/>
+  <text x="671.45" y="158" font-size="12" font-weight="600" fill="#5A9BD5">User</text>
+  <text x="671.45" y="174" font-size="11" fill="#3B7DD8">Owns CID objects and funds on-chain storage for their content</text>
+  <text x="671.45" y="190" font-size="11" fill="#2563B8">Creates CID · approves provider offers after the offer window closes</text>
+  <text x="671.45" y="206" font-size="11" fill="#2563B8">Honors approved offers in the current epoch · calls cid next-epoch at boundaries</text>
+
+  <!-- Provider -->
+  <rect x="1195.1" y="148" width="13.3" height="70" rx="2.66" fill="#D85A30"/>
+  <text x="1219.1" y="158" font-size="12" font-weight="600" fill="#F0997B">Provider</text>
+  <text x="1219.1" y="174" font-size="11" fill="#D85A30">Storage vendor; bids to host a user&apos;s CID in exchange for IOTA</text>
+  <text x="1219.1" y="190" font-size="11" fill="#F0997B">submit_offer during the first 10 min of the next-epoch window</text>
+  <text x="1219.1" y="206" font-size="11" fill="#F0997B">withdraw pulls payment after the user has honored and epochs have rolled forward</text>
+
+  <g id="workflow" transform="translate(0, 188)">
+  <!-- ─── EPOCH COLUMN HEADERS (shifted right of actor label gutter) ─── -->
+  <!-- Setup -->
+  <rect x="279.8" y="108" width="252.7" height="36" rx="10.64" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="406.15" y="131" font-size="12" font-weight="600" fill="#8888AA" text-anchor="middle" letter-spacing="0.08em">SETUP</text>
+
+  <!-- Next Epoch -->
+  <rect x="559.1" y="108" width="339.15" height="36" rx="10.64" fill="#1A3048" stroke="#6CB4EE" stroke-width="1.33"/>
+  <text x="728.01" y="131" font-size="12" font-weight="600" fill="#A8D4F5" text-anchor="middle" letter-spacing="0.08em">NEXT EPOCH</text>
+
+  <!-- Current Epoch -->
+  <rect x="924.85" y="108" width="339.15" height="36" rx="10.64" fill="#0F2E22" stroke="#1D9E75" stroke-width="1.33"/>
+  <text x="1093.76" y="131" font-size="12" font-weight="600" fill="#5DCAA5" text-anchor="middle" letter-spacing="0.08em">CURRENT EPOCH</text>
+
+  <!-- Previous Epoch -->
+  <rect x="1290.6" y="108" width="339.15" height="36" rx="10.64" fill="#2E2A12" stroke="#EF9F27" stroke-width="1.33"/>
+  <text x="1459.51" y="131" font-size="12" font-weight="600" fill="#FAC775" text-anchor="middle" letter-spacing="0.08em">PREVIOUS EPOCH</text>
+
+  <!-- ─── ACTOR LANE LABELS (left gutter — no step boxes here) ─── -->
+  <!-- Ground Control lane -->
+  <rect x="79.8" y="175" width="1642.95" height="100" rx="7.98" fill="#18182A" stroke="#2A2A40" stroke-width="0.67"/>
+  <rect x="79.8" y="175" width="7.98" height="100" rx="3.99" fill="#888780"/>
+  <text x="100" y="222" font-size="13" font-weight="600" fill="#B4B2A9">Ground Control</text>
+  <text x="100" y="240" font-size="11" fill="#5F5E5A">admin · whitelist owner</text>
+
+  <!-- User lane (blue) -->
+  <rect x="79.8" y="287" width="1642.95" height="100" rx="7.98" fill="#0A1A30" stroke="#2A2A40" stroke-width="0.67"/>
+  <rect x="79.8" y="287" width="7.98" height="100" rx="3.99" fill="#1E55A8"/>
+  <text x="100" y="334" font-size="13" font-weight="600" fill="#5A9BD5">User</text>
+  <text x="100" y="352" font-size="11" fill="#3B7DD8">CID owner</text>
+
+  <!-- Provider lane (orange) -->
+  <rect x="79.8" y="399" width="1642.95" height="100" rx="7.98" fill="#2E1509" stroke="#2A2A40" stroke-width="0.67"/>
+  <rect x="79.8" y="399" width="7.98" height="100" rx="3.99" fill="#D85A30"/>
+  <text x="100" y="446" font-size="13" font-weight="600" fill="#F0997B">Provider</text>
+  <text x="100" y="464" font-size="11" fill="#D85A30">storage service</text>
+
+  <!-- ─── ARROWS (drawn under step boxes) ─── -->
+  <defs>
+    <marker id="arrowP" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#6CB4EE"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#1D9E75"/>
+    </marker>
+    <marker id="arrowO" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#EF9F27"/>
+    </marker>
+    <!-- Same visual size as arrowGr on 1.5px strokes when used on 2.25px stroke -->
+    <marker id="arrowOsm" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="4.67" markerHeight="4.67" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#EF9F27"/>
+    </marker>
+    <marker id="arrowR" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#D85A30"/>
+    </marker>
+    <marker id="arrowGr" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#888780"/>
+    </marker>
+    <marker id="arrowWh" viewBox="0 0 10 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 4 L0 8 Z" fill="#FFFFFF"/>
+    </marker>
+  </defs>
+
+  <!-- 1 → 2: whitelist → cid create (into left-center) -->
+  <path d="M406 258 L406 268 L406 337 L572.675 337" fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowGr)"/>
+
+  <!-- 1 → 3: whitelist → submit_offer (shared fork, into submit) -->
+  <path d="M406 258 L406 268 L406 448 L572.675 448" fill="none" stroke="#888780" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowGr)"/>
+
+  <!-- 2 → 3: bottom of cid create → top of submit_offer -->
+  <path d="M646.675 370 L646.675 416" fill="none" stroke="#6CB4EE" stroke-width="1.5" marker-end="url(#arrowP)"/>
+
+  <!-- 3 → 4: right center of submit → bottom center of approve -->
+  <path d="M720.675 449 L823.175 449 L823.175 370" fill="none" stroke="#6CB4EE" stroke-width="1.5" marker-end="url(#arrowP)"/>
+
+  <!-- 4 → 5: approve_offer → next-epoch #1 -->
+  <path d="M896.675 337 L941 337" fill="none" stroke="#6CB4EE" stroke-width="1.5" marker-end="url(#arrowP)"/>
+
+  <!-- 5 → 6: next-epoch #1 → honor_offer -->
+  <path d="M1088 337 L1100 337" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#arrowG)"/>
+
+  <!-- 6 → 7: honor_offer → next-epoch #2 -->
+  <path d="M1247 337 L1386 337" fill="none" stroke="#1D9E75" stroke-width="1.5" marker-end="url(#arrowG)"/>
+
+  <!-- 7 → 8: next-epoch #2 → withdraw -->
+  <path d="M1459.5 370 L1459.5 416" fill="none" stroke="#EF9F27" stroke-width="1.5" marker-end="url(#arrowO)"/>
+
+  <!-- 10 min window — steps 2 & 3 (12px uniform padding) -->
+  <rect x="560.675" y="292" width="172" height="202" rx="10" fill="none" stroke="#8FC5EE" stroke-width="1.5" stroke-dasharray="7,4"/>
+  <line x1="560.675" y1="292" x2="560.675" y2="494" stroke="#6CB4EE" stroke-width="2" opacity="0.5"/>
+  <line x1="732.675" y1="292" x2="732.675" y2="494" stroke="#6CB4EE" stroke-width="2" opacity="0.5"/>
+  <text x="646.675" y="286" font-size="10" font-weight="600" fill="#A8D4F5" text-anchor="middle">within first 10 min of epoch</text>
+
+  <!-- ─── STEP NODES (aligned inside epoch columns) ─── -->
+
+  <!-- Step 1: whitelist add (GC, setup col — centered) -->
+  <rect x="321" y="192" width="170" height="66" rx="13.3" fill="#27273D" stroke="#5F5E5A" stroke-width="1.33"/>
+  <text x="406" y="215" font-size="11" font-weight="700" fill="#D3D1C7" text-anchor="middle">whitelist add</text>
+  <text x="406" y="232" font-size="9" fill="#888780" text-anchor="middle">Ground Control adds user and</text>
+  <text x="406" y="245" font-size="9" fill="#888780" text-anchor="middle">provider to the whitelist</text>
+
+  <!-- Step 2: cid create (aligned with step 3 — 10 min window) -->
+  <rect x="572.675" y="304" width="148" height="66" rx="13.3" fill="#152535" stroke="#6CB4EE" stroke-width="2.0"/>
+  <text x="646.675" y="327" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">cid create</text>
+  <text x="646.675" y="344" font-size="9" fill="#8FC5EE" text-anchor="middle">User registers a CID</text>
+  <text x="646.675" y="357" font-size="9" fill="#8FC5EE" text-anchor="middle">object for their content</text>
+
+  <!-- Step 3: submit_offer (provider row, aligned with step 2 — 10 min window) -->
+  <rect x="572.675" y="416" width="148" height="66" rx="13.3" fill="#152535" stroke="#6CB4EE" stroke-width="2.0"/>
+  <text x="646.675" y="439" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">submit_offer</text>
+  <text x="646.675" y="456" font-size="9" fill="#8FC5EE" text-anchor="middle">Provider bids to host the CID</text>
+  <text x="646.675" y="469" font-size="9" fill="#8FC5EE" text-anchor="middle">in the next-epoch offer window</text>
+
+  <!-- Step 4: approve_offer (User, next epoch — right slot) -->
+  <rect x="749.675" y="304" width="147" height="66" rx="13.3" fill="#152535" stroke="#6CB4EE" stroke-width="2.0"/>
+  <text x="823.175" y="327" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">approve_offer</text>
+  <text x="823.175" y="344" font-size="9" fill="#8FC5EE" text-anchor="middle">User accepts a provider offer</text>
+  <text x="823.175" y="357" font-size="9" fill="#8FC5EE" text-anchor="middle">after the window closes</text>
+
+  <!-- Step 5: next-epoch #1 (User, current epoch — left slot) -->
+  <rect x="941" y="304" width="147" height="66" rx="13.3" fill="#0F2318" stroke="#1D9E75" stroke-width="2.0" stroke-dasharray="5,3"/>
+  <text x="1014.5" y="327" font-size="11" font-weight="700" fill="#9FE1CB" text-anchor="middle">cid next-epoch</text>
+  <text x="1014.5" y="344" font-size="9" fill="#5DCAA5" text-anchor="middle">User advances epochs so the</text>
+  <text x="1014.5" y="357" font-size="9" fill="#5DCAA5" text-anchor="middle">offer moves to current epoch</text>
+
+  <!-- Step 6: honor_offer (User, current epoch — right slot) -->
+  <rect x="1100" y="304" width="147" height="66" rx="13.3" fill="#0F2318" stroke="#1D9E75" stroke-width="2.0"/>
+  <text x="1173.5" y="327" font-size="11" font-weight="700" fill="#9FE1CB" text-anchor="middle">honor_offer</text>
+  <text x="1173.5" y="344" font-size="9" fill="#5DCAA5" text-anchor="middle">User commits to the approved</text>
+  <text x="1173.5" y="357" font-size="9" fill="#5DCAA5" text-anchor="middle">offer before epoch ends</text>
+
+  <!-- Step 7: next-epoch #2 (User, previous epoch — centered) -->
+  <rect x="1386" y="304" width="147" height="66" rx="13.3" fill="#2E2A12" stroke="#EF9F27" stroke-width="2.0" stroke-dasharray="5,3"/>
+  <text x="1459.5" y="327" font-size="11" font-weight="700" fill="#FAC775" text-anchor="middle">cid next-epoch</text>
+  <text x="1459.5" y="344" font-size="9" fill="#EF9F27" text-anchor="middle">User advances again; honored</text>
+  <text x="1459.5" y="357" font-size="9" fill="#EF9F27" text-anchor="middle">offer shifts to previous epoch</text>
+
+  <!-- Step 8: withdraw (Provider, previous epoch — centered) -->
+  <rect x="1386" y="416" width="147" height="66" rx="13.3" fill="#2E2A12" stroke="#EF9F27" stroke-width="2.0"/>
+  <text x="1459.5" y="439" font-size="11" font-weight="700" fill="#FAC775" text-anchor="middle">withdraw</text>
+  <text x="1459.5" y="456" font-size="9" fill="#EF9F27" text-anchor="middle">Provider collects IOTA payment</text>
+  <text x="1459.5" y="469" font-size="9" fill="#D4A82A" text-anchor="middle">once the epoch has ended</text>
+
+  <!-- 7 → 3: repeating cycle (drawn on top so arrowhead is visible) -->
+  <path d="M1533 337 L1575 337 L1575 532 L646.675 532 L646.675 482" fill="none" stroke="#EF9F27" stroke-width="2.25" stroke-dasharray="8,5" marker-end="url(#arrowOsm)"/>
+
+  <!-- Repeating epoch cycle label (on 7 → 3 loop) -->
+  <text x="1152" y="522" font-size="14" font-weight="600" fill="#EF9F27" text-anchor="middle">Repeating epoch cycle</text>
+
+  <!-- Step number badges (top-left corner of each step box) -->
+  <circle cx="333" cy="198" r="12" fill="#27273D" stroke="#5F5E5A" stroke-width="1.33"/>
+  <text x="333" y="203" font-size="11" font-weight="700" fill="#D3D1C7" text-anchor="middle">1</text>
+
+  <circle cx="584.675" cy="310" r="12" fill="#152535" stroke="#6CB4EE" stroke-width="1.33"/>
+  <text x="584.675" y="315" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">2</text>
+
+  <circle cx="584.675" cy="422" r="12" fill="#152535" stroke="#6CB4EE" stroke-width="1.33"/>
+  <text x="584.675" y="427" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">3</text>
+
+  <circle cx="761.675" cy="310" r="12" fill="#152535" stroke="#6CB4EE" stroke-width="1.33"/>
+  <text x="761.675" y="315" font-size="11" font-weight="700" fill="#C8E4F8" text-anchor="middle">4</text>
+
+  <circle cx="953" cy="310" r="12" fill="#0F2318" stroke="#1D9E75" stroke-width="1.33"/>
+  <text x="953" y="315" font-size="11" font-weight="700" fill="#9FE1CB" text-anchor="middle">5</text>
+
+  <circle cx="1112" cy="310" r="12" fill="#0F2318" stroke="#1D9E75" stroke-width="1.33"/>
+  <text x="1112" y="315" font-size="11" font-weight="700" fill="#9FE1CB" text-anchor="middle">6</text>
+
+  <circle cx="1398" cy="310" r="12" fill="#2E2A12" stroke="#EF9F27" stroke-width="1.33"/>
+  <text x="1398" y="315" font-size="11" font-weight="700" fill="#FAC775" text-anchor="middle">7</text>
+
+  <circle cx="1398" cy="422" r="12" fill="#2E2A12" stroke="#EF9F27" stroke-width="1.33"/>
+  <text x="1398" y="427" font-size="11" font-weight="700" fill="#FAC775" text-anchor="middle">8</text>
+
+  <!-- Offer state flags (aligned under steps 3–8) -->
+  <rect x="79.8" y="556" width="1642.95" height="128" rx="7.98" fill="#101018" stroke="#2A2A40" stroke-width="0.67"/>
+
+  <!-- Column headers (centers match step 3, 4, 6, 8) -->
+  <text x="646.675" y="576" font-size="10" fill="#888780" text-anchor="middle">after submit</text>
+  <text x="823.175" y="576" font-size="10" fill="#888780" text-anchor="middle">after approve</text>
+  <text x="1173.5" y="576" font-size="10" fill="#888780" text-anchor="middle">after honor</text>
+  <text x="1459.5" y="576" font-size="10" fill="#888780" text-anchor="middle">after withdraw</text>
+
+  <!-- Row: approved -->
+  <text x="100" y="592" font-size="10" font-weight="600" fill="#B4B2A9">Offer state progression</text>
+  <text x="100" y="612" font-size="11" fill="#888780">approved</text>
+  <rect x="608.675" y="598" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="646.675" y="612" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="785.175" y="598" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="823.175" y="612" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+  <rect x="1135.5" y="598" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="1173.5" y="612" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+  <rect x="1421.5" y="598" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="1459.5" y="612" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+
+  <!-- Row: honored -->
+  <line x1="268" y1="626" x2="1722.75" y2="626" stroke="#2A2A40" stroke-width="0.5" opacity="0.5"/>
+  <text x="100" y="640" font-size="11" fill="#888780">honored</text>
+  <rect x="608.675" y="626" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="646.675" y="640" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="785.175" y="626" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="823.175" y="640" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="1135.5" y="626" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="1173.5" y="640" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+  <rect x="1421.5" y="626" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="1459.5" y="640" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+
+  <!-- Row: paid -->
+  <line x1="268" y1="654" x2="1722.75" y2="654" stroke="#2A2A40" stroke-width="0.5" opacity="0.5"/>
+  <text x="100" y="668" font-size="11" fill="#888780">paid</text>
+  <rect x="608.675" y="654" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="646.675" y="668" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="785.175" y="654" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="823.175" y="668" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="1135.5" y="654" width="76" height="20" rx="10" fill="#1E1E2E" stroke="#3A3A55" stroke-width="0.67"/>
+  <text x="1173.5" y="668" font-size="10" fill="#5F5E5A" text-anchor="middle">false</text>
+  <rect x="1421.5" y="654" width="76" height="20" rx="10" fill="#1A3A1A" stroke="#3B6D11" stroke-width="1.33"/>
+  <text x="1459.5" y="668" font-size="10" fill="#C0DD97" text-anchor="middle">true</text>
+
+  <!-- Progression arrows: pill edge → next pill edge, 14px gap at start and end -->
+  <path d="M698.675 636 L771.175 636" fill="none" stroke="#3A3A55" stroke-width="1.5" marker-end="url(#arrowGr)"/>
+  <path d="M875.175 636 L1121.5 636" fill="none" stroke="#3A3A55" stroke-width="1.5" marker-end="url(#arrowGr)"/>
+  <path d="M1225.5 636 L1407.5 636" fill="none" stroke="#3A3A55" stroke-width="1.5" marker-end="url(#arrowGr)"/>
+
+  </g>
+
+  <!-- Section titles (drawn last) -->
+  <rect x="79.8" y="98" width="420" height="24" fill="#0F0F1A"/>
+  <text x="100" y="116" font-size="15" font-weight="600" fill="#FFFFFF" letter-spacing="-0.3">Parties &amp; roles</text>
+  <rect x="79.8" y="262" width="360" height="24" fill="#0F0F1A"/>
+  <text x="100" y="280" font-size="15" font-weight="600" fill="#FFFFFF" letter-spacing="-0.3">Lifecycle workflow</text>
+
+</svg>

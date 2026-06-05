@@ -71,6 +71,11 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, fb *feedbac
 	b.idBtn = widget.NewButtonWithIcon("", ftheme.AccountIcon(), onIdentity)
 	b.idBtn.Importance = widget.LowImportance
 
+	guideBtn := widget.NewButtonWithIcon("", ftheme.InfoIcon(), func() {
+		OpenWorkflowMap(win)
+	})
+	guideBtn.Importance = widget.LowImportance
+
 	settingsBtn := widget.NewButtonWithIcon("", ftheme.SettingsIcon(), func() {
 		OpenAppSettings(win, app, fb, func() {
 			b.Refresh(app.Registry.Current())
@@ -79,7 +84,7 @@ func NewAppBar(win fyne.Window, app *state.AppState, t *theme.Theme, fb *feedbac
 	settingsBtn.Importance = widget.LowImportance
 
 	left := container.NewHBox(b.brand)
-	right := container.NewHBox(connGroup, widget.NewSeparator(), settingsBtn, b.idBtn)
+	right := container.NewHBox(connGroup, widget.NewSeparator(), guideBtn, settingsBtn, b.idBtn)
 	b.root = container.NewBorder(nil, widget.NewSeparator(), left, right, nil)
 
 	go b.pingLoop()
